@@ -28,7 +28,16 @@ export class HUD {
           <span class="chip-icon">🪙</span>
           <b id="hud-coins-n">0</b>
         </div>
+        <div class="chip chip-village" id="hud-village" data-ui hidden>
+          <span class="chip-icon">👥</span>
+          <b id="hud-pop">0</b>
+        </div>
         <button class="icon-btn" id="hud-menu" data-ui aria-label="Opzioni">⚙️</button>
+      </div>
+
+      <!-- Barra della salute: compare solo quando serve, per non ingombrare -->
+      <div class="health" id="hud-health" hidden>
+        <i id="hud-health-fill"></i>
       </div>
 
       <div class="toast-wrap" id="hud-toasts"></div>
@@ -56,7 +65,13 @@ export class HUD {
       toasts: this.root.querySelector('#hud-toasts'),
       sheet: this.root.querySelector('#hud-sheet'),
       stats: this.root.querySelector('#opt-stats'),
+      village: this.root.querySelector('#hud-village'),
+      pop: this.root.querySelector('#hud-pop'),
+      health: this.root.querySelector('#hud-health'),
+      healthFill: this.root.querySelector('#hud-health-fill'),
     };
+
+    this.healthShown = 1;
 
     this.shownCoins = 0;
     this.targetCoins = 0;
@@ -69,6 +84,18 @@ export class HUD {
     const g = this.game;
 
     g.bus.on('carry:changed', () => this._refreshCarry());
+
+    // Il contatore degli abitanti compare solo quando il villaggio nasce.
+    const refreshPop = () => {
+      const n = g.village.population;
+      this.el.village.hidden = n === 0;
+      this.el.pop.textContent = n;
+      this.el.village.classList.remove('pop');
+      void this.el.village.offsetWidth;
+      this.el.village.classList.add('pop');
+    };
+    g.bus.on('npc:arrived', refreshPop);
+    g.bus.on('village:level', refreshPop);
     g.bus.on('coins:changed', (c) => {
       this.targetCoins = c;
       this.el.coins.classList.remove('pop');
@@ -115,12 +142,18 @@ export class HUD {
 
   _refreshStats() {
     const s = this.game.stats;
+    const v = this.game.village;
     this.el.stats.innerHTML = `
       <div><b>${s.treesChopped}</b><span>alberi</span></div>
+      <div><b>${s.rocksMined}</b><span>massi</span></div>
+      <div><b>${s.wolvesKilled}</b><span>lupi</span></div>
+      <div><b>${v.population}</b><span>abitanti</span></div>
       <div><b>${s.coins}</b><span>monete</span></div>
       <div><b>${s.axeLevel}</b><span>ascia</span></div>
+      <div><b>${s.hasPick ? s.pickLevel : '—'}</b><span>piccone</span></div>
       <div><b>${s.capacity}</b><span>zaino</span></div>
     `;
+    this.el.stats.dataset.stage = v.stageName;
   }
 
   /** Messaggio temporaneo in alto (eventi importanti). */
@@ -144,6 +177,17 @@ export class HUD {
       const step = Math.max(1, Math.ceil(Math.abs(diff) * 0.22));
       this.shownCoins += Math.sign(diff) * Math.min(step, Math.abs(diff));
       this.el.coinsN.textContent = this.shownCoins;
+    }
+
+    // Barra della salute: appare quando sei ferito e sparisce quando guarisci.
+    const p = this.game.player;
+    if (!p) return;
+    const ratio = Math.max(0, p.hp / p.maxHp);
+    const show = ratio < 0.999;
+    if (show === this.el.health.hidden) this.el.health.hidden = !show;
+    if (show) {
+      this.el.healthFill.style.transform = `scaleX(${ratio})`;
+      this.el.health.classList.toggle('low', ratio < 0.34);
     }
   }
 }

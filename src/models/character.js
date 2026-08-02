@@ -29,6 +29,9 @@ export const CHAR = {
   chopFrames: 4,
 };
 
+/** Attrezzi impugnabili. */
+export const TOOL = { AXE: 'axe', PICK: 'pick' };
+
 /* --------------------------------------------------------------- attrezzo */
 
 /** Ascia: il modello cambia con il livello di potenziamento. */
@@ -62,6 +65,36 @@ function makeAxe(level) {
     // decorazione dorata sul collo del manico
     const ring = M.cylinder(0.042, 0.042, 0.05, 6, PAL.coin);
     M.translate(ring, 0, len - bh * 1.05, 0);
+    M.merge(g, ring);
+  }
+  return g;
+}
+
+/** Piccone: sblocca la pietra. Anche lui cresce coi potenziamenti. */
+function makePickaxe(level) {
+  const g = M.mesh();
+  const len = level >= 2 ? 0.62 : 0.56;
+
+  const handle = M.cylinder(0.032, 0.028, len, 6, PAL.handle);
+  M.merge(g, handle);
+
+  const headC = level >= 2 ? PAL.steelA : PAL.ironA;
+  const headD = level >= 2 ? PAL.steelB : PAL.ironB;
+
+  // testa a doppia punta, orientata lungo Z
+  const core = M.box(0.075, 0.11, 0.16, headD);
+  M.translate(core, 0, len - 0.09, 0);
+  M.merge(g, core);
+
+  for (const side of [1, -1]) {
+    const tip = M.box(0.06, 0.085, 0.26, side > 0 ? headC : headD, { taper: 0.7 });
+    M.rotX(tip, side * 0.28);
+    M.translate(tip, 0, len - 0.085, side * 0.2);
+    M.merge(g, tip);
+  }
+  if (level >= 2) {
+    const ring = M.cylinder(0.042, 0.042, 0.05, 6, PAL.coin);
+    M.translate(ring, 0, len - 0.17, 0);
     M.merge(g, ring);
   }
   return g;
@@ -138,13 +171,20 @@ function pose(action, t) {
  * @param {object} o { yaw, action:'idle'|'walk'|'chop', t:0..1, axeLevel, bagLevel }
  */
 export function buildCharacter(o) {
-  const { yaw = 0, action = 'idle', t = 0, axeLevel = 1, bagLevel = 1 } = o;
+  const {
+    yaw = 0, action = 'idle', t = 0,
+    axeLevel = 1, bagLevel = 1, pickLevel = 1,
+    tool = TOOL.AXE,
+    skin = PAL.skin, shirt = PAL.shirt, shirtAlt = PAL.shirtAlt,
+    pants = PAL.pants, hair = PAL.hair,
+    withTool = true,
+  } = o;
   const p = pose(action, t);
   const g = M.mesh();
 
   /* --- gambe (oscillano attorno all'anca) --- */
   const legMesh = (swing, side) => {
-    const leg = M.box(P.legW, P.legH, P.legD, PAL.pants);
+    const leg = M.box(P.legW, P.legH, P.legD, pants);
     // stivale
     const boot = M.box(P.legW * 1.1, 0.13, P.legD * 1.25, PAL.boot);
     M.translate(boot, 0, 0, 0.02);
@@ -158,21 +198,21 @@ export function buildCharacter(o) {
   M.merge(g, legMesh(p.legR, 1));
 
   /* --- torso --- */
-  const torso = M.box(P.torsoW, P.torsoH, P.torsoD, PAL.shirt, { taper: -0.06 });
+  const torso = M.box(P.torsoW, P.torsoH, P.torsoD, shirt, { taper: -0.06 });
   M.translate(torso, 0, P.hipY, 0);
   // cintura
   const belt = M.box(P.torsoW * 1.04, 0.08, P.torsoD * 1.06, PAL.belt);
   M.translate(belt, 0, P.hipY + 0.01, 0);
   M.merge(torso, belt);
   // colletto
-  const collar = M.box(P.torsoW * 0.86, 0.06, P.torsoD * 0.9, PAL.shirtAlt);
+  const collar = M.box(P.torsoW * 0.86, 0.06, P.torsoD * 0.9, shirtAlt);
   M.translate(collar, 0, P.hipY + P.torsoH - 0.05, 0);
   M.merge(torso, collar);
 
   /* --- braccia --- */
   const armMesh = (swing, side) => {
-    const arm = M.box(P.armW, P.armH, P.armD, PAL.shirtAlt);
-    const hand = M.box(P.armW * 1.05, 0.11, P.armD * 1.05, PAL.skin);
+    const arm = M.box(P.armW, P.armH, P.armD, shirtAlt);
+    const hand = M.box(P.armW * 1.05, 0.11, P.armD * 1.05, skin);
     M.merge(arm, hand);
     M.translate(arm, side * (P.torsoW / 2 + P.armW / 2 - 0.02), P.shoulderY - P.armH, 0);
     M.rotX(arm, swing, P.shoulderY, 0);
@@ -180,27 +220,29 @@ export function buildCharacter(o) {
   };
   M.merge(torso, armMesh(p.armL, -1));
 
-  // braccio destro + ascia impugnata
+  // braccio destro + attrezzo impugnato
   const rightArm = armMesh(p.armR, 1);
-  const axe = makeAxe(axeLevel);
-  M.rotZ(axe, -0.25);
-  M.rotX(axe, -0.5);
-  // posizione della mano destra a riposo
-  M.translate(axe, P.torsoW / 2 + P.armW / 2 - 0.02, P.shoulderY - P.armH + 0.02, 0.04);
-  M.rotX(axe, p.armR, P.shoulderY, 0);
-  M.merge(rightArm, axe);
+  if (withTool) {
+    const held = tool === TOOL.PICK ? makePickaxe(pickLevel) : makeAxe(axeLevel);
+    M.rotZ(held, -0.25);
+    M.rotX(held, -0.5);
+    // posizione della mano destra a riposo
+    M.translate(held, P.torsoW / 2 + P.armW / 2 - 0.02, P.shoulderY - P.armH + 0.02, 0.04);
+    M.rotX(held, p.armR, P.shoulderY, 0);
+    M.merge(rightArm, held);
+  }
   M.merge(torso, rightArm);
 
   /* --- testa --- */
   const head = M.mesh();
-  const skull = M.box(P.headR * 1.8, P.headR * 1.85, P.headR * 1.7, PAL.skin, { taper: 0.12 });
+  const skull = M.box(P.headR * 1.8, P.headR * 1.85, P.headR * 1.7, skin, { taper: 0.12 });
   M.merge(head, skull);
   // capelli
-  const hair = M.box(P.headR * 1.86, P.headR * 0.72, P.headR * 1.76, PAL.hair, { taper: 0.16 });
-  M.translate(hair, 0, P.headR * 1.28, 0);
-  M.merge(head, hair);
+  const hairMesh = M.box(P.headR * 1.86, P.headR * 0.72, P.headR * 1.76, hair, { taper: 0.16 });
+  M.translate(hairMesh, 0, P.headR * 1.28, 0);
+  M.merge(head, hairMesh);
   // ciuffo frontale
-  const fringe = M.box(P.headR * 1.7, P.headR * 0.34, P.headR * 0.3, PAL.hair);
+  const fringe = M.box(P.headR * 1.7, P.headR * 0.34, P.headR * 0.3, hair);
   M.translate(fringe, 0, P.headR * 1.12, P.headR * 0.74);
   M.merge(head, fringe);
   // occhi (piccoli quad scuri sulla faccia +Z)
@@ -216,7 +258,7 @@ export function buildCharacter(o) {
   M.merge(torso, head);
 
   /* --- zaino --- */
-  M.merge(torso, makeBackpack(bagLevel));
+  if (withTool) M.merge(torso, makeBackpack(bagLevel));
 
   /* --- inclinazione generale del busto + rimbalzo --- */
   M.rotX(torso, p.lean, P.hipY, 0);

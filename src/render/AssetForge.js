@@ -14,8 +14,32 @@ import { bakeMesh, bakeShadow, bakeGlow, makeCanvas } from './SpriteBaker.js';
 import { PAL } from '../data/palette.js';
 import * as Nature from '../models/nature.js';
 import * as Build from '../models/buildings.js';
-import { buildCharacter, buildCarriedLog, CHAR } from '../models/character.js';
+import * as Village from '../models/village.js';
+import { buildCharacter, buildCarriedLog, CHAR, TOOL } from '../models/character.js';
+import { buildWolf, buildAlertMark, ENEMY } from '../models/enemies.js';
 import { rotY as rotateMeshY } from './Mesh.js';
+
+/**
+ * Varianti di vestiario degli abitanti. Riusiamo lo stesso rig del
+ * protagonista cambiando i colori: tre atlanti bastano a dare l'impressione
+ * di una popolazione varia, senza far esplodere la memoria.
+ */
+const NPC_LOOKS = [
+  { shirt: PAL.npcShirtA, shirtAlt: PAL.roofRedD, pants: PAL.pants,
+    hair: PAL.npcHairA, skin: PAL.npcSkinA },
+  { shirt: PAL.npcShirtB, shirtAlt: PAL.leafB, pants: PAL.belt,
+    hair: PAL.npcHairB, skin: PAL.npcSkinB },
+  { shirt: PAL.npcShirtC, shirtAlt: PAL.shirtAlt, pants: PAL.stoneDark,
+    hair: PAL.npcHairC, skin: PAL.npcSkinC },
+];
+
+/** Gli abitanti hanno meno direzioni e frame: sono comprimari. */
+const NPC_DIRS = 8;
+const NPC_FRAMES = 6;
+
+/** Orientamenti della staccionata (mezzo giro basta: è simmetrica). */
+const FENCE_DIRS = 12;
+export { FENCE_DIRS };
 
 /** Varianti pre-generate di ogni elemento naturale. */
 const VARIANTS = {
@@ -27,6 +51,8 @@ const VARIANTS = {
   pebble: 6,
   rock: 5,
   patch: 16,   // chiazze di prato pre-composte (vedi buildGrassPatch)
+  oreRock: 6,  // massi raccoglibili
+  rubble: 3,
 };
 
 /**
@@ -51,7 +77,9 @@ export class AssetForge {
     this.assets = {
       trees: [], stumps: [], saplings: [], bushes: [],
       tufts: [], flowers: [], pebbles: [], rocks: [], patches: [],
-      char: null, buildings: {}, fx: {},
+      oreRocks: [], rubble: [],
+      char: null, wolf: null, npc: [],
+      buildings: {}, village: {}, fx: {},
     };
     this.jobs = [];
     this.done = 0;
@@ -127,11 +155,49 @@ export class AssetForge {
       });
     }
 
+    /* --------------------------------------------------- massi di pietra */
+    this._job(() => {
+      for (let i = 0; i < VARIANTS.oreRock; i++) {
+        A.oreRocks.push(this._bakeProp(Nature.buildOreRock(rnd), 1.8));
+      }
+      for (let i = 0; i < VARIANTS.rubble; i++) {
+        A.rubble.push(this._bakeProp(Nature.buildRubble(rnd), 1.2));
+      }
+    });
+
     /* ------------------------------------------------------------ risorse */
     this._job(() => {
       A.logDrop = this._bakeProp(Nature.buildLogDrop(), 1.5);
+      A.stoneDrop = this._bakeProp(Nature.buildStoneDrop(), 1.5);
       A.coin = this._bakeProp(Nature.buildCoin(), 1.5);
+      A.alertMark = this._bakeProp(buildAlertMark(), 1.5);
     });
+    this._job(() => {
+      A.carriedStones = [];
+      for (let d = 0; d < CHAR.dirs; d++) {
+        const m = Nature.buildCarriedStone();
+        rotateMeshY(m, (d / CHAR.dirs) * Math.PI * 2);
+        A.carriedStones.push(bakeMesh(m, { outline: 1.4 }));
+      }
+    });
+
+    /* -------------------------------------------------------------- lupi */
+    this._job(() => { A.wolf = this._newWolfAtlas(); });
+    for (let d = 0; d < ENEMY.dirs; d++) {
+      this._job(() => this._bakeWolfDir(A.wolf, d));
+    }
+
+    /* ---------------------------------------------------------- abitanti */
+    for (let v = 0; v < NPC_LOOKS.length; v++) {
+      this._job(() => { A.npc[v] = this._newNPCAtlas(); });
+      for (let d = 0; d < NPC_DIRS; d += 2) {
+        const dd = d;
+        this._job(() => {
+          this._bakeNPCDir(A.npc[v], dd, NPC_LOOKS[v]);
+          this._bakeNPCDir(A.npc[v], dd + 1, NPC_LOOKS[v]);
+        });
+      }
+    }
 
     /* ----------------------------------------------------------- edifici */
     this._job(() => {
@@ -144,6 +210,90 @@ export class AssetForge {
       A.buildings.signpost = this._bakeProp(Build.buildSignpost(), 1.5);
       A.buildings.campfire = this._bakeProp(Build.buildCampfire(), 1.5);
     });
+
+    /* ------------------------------------------------- edifici di Fase 2 */
+    const phase2 = [
+      ['sawmill', Village.buildSawmill],
+      ['quarry', Village.buildQuarry],
+      ['house', Village.buildHouse],
+      ['warehouse', Village.buildWarehouse],
+    ];
+    for (const [id, fn] of phase2) {
+      this._job(() => {
+        A.buildings[id] = this._bakeProp(fn(), 2);
+        A.buildings[id + 'Ghost'] = tintSprite(A.buildings[id], '#8ad4ff', 0.82, 0.9);
+      });
+    }
+
+    /* --------------------------------------------- arredi del villaggio */
+    // La staccionata va cotta in più orientamenti: solo così il recinto può
+    // seguire davvero il perimetro del villaggio invece di restare allineato
+    // a un unico asse.
+    this._job(() => {
+      A.village.fences = [];
+      for (let d = 0; d < FENCE_DIRS; d++) {
+        const m = Village.buildFence();
+        rotateMeshY(m.mesh, (d / FENCE_DIRS) * Math.PI);
+        A.village.fences.push(this._bakeProp(m, 1.5));
+      }
+      A.village.fence = A.village.fences[0];
+      A.village.gate = this._bakeProp(Village.buildGate(), 1.8);
+      A.village.bench = this._bakeProp(Village.buildBench(), 1.5);
+    });
+    this._job(() => {
+      A.village.well = this._bakeProp(Village.buildWell(), 1.8);
+      A.village.cart = this._bakeProp(Village.buildCart(), 1.6);
+      A.village.brazier = this._bakeProp(Village.buildBrazier(), 1.5);
+      A.village.garden = this._bakeProp(Village.buildGarden(rnd), 1.2);
+    });
+  }
+
+  /* -------------------------------------------------------- atlante lupo */
+
+  _newWolfAtlas() {
+    return { dirs: ENEMY.dirs, walk: [], attack: [], idle: [] };
+  }
+
+  _bakeWolfDir(atlas, d) {
+    const yaw = (d / ENEMY.dirs) * Math.PI * 2;
+    const walk = [];
+    for (let f = 0; f < ENEMY.walkFrames; f++) {
+      walk.push(bakeMesh(buildWolf({ yaw, action: 'walk', t: f / ENEMY.walkFrames }),
+        { outline: 1.5 }));
+    }
+    const attack = [];
+    for (let f = 0; f < ENEMY.attackFrames; f++) {
+      attack.push(bakeMesh(
+        buildWolf({ yaw, action: 'attack', t: f / (ENEMY.attackFrames - 1) }),
+        { outline: 1.5 },
+      ));
+    }
+    atlas.walk[d] = walk;
+    atlas.attack[d] = attack;
+    atlas.idle[d] = bakeMesh(buildWolf({ yaw, action: 'idle', t: 0 }), { outline: 1.5 });
+  }
+
+  /* ---------------------------------------------------- atlante abitanti */
+
+  _newNPCAtlas() {
+    return { dirs: NPC_DIRS, frames: NPC_FRAMES, walk: [], idle: [] };
+  }
+
+  _bakeNPCDir(atlas, d, look) {
+    if (d >= NPC_DIRS) return;
+    const yaw = (d / NPC_DIRS) * Math.PI * 2;
+    const opts = { ...look, withTool: false };
+    const walk = [];
+    for (let f = 0; f < NPC_FRAMES; f++) {
+      walk.push(bakeMesh(
+        buildCharacter({ yaw, action: 'walk', t: f / NPC_FRAMES, ...opts }),
+        { outline: 1.5 },
+      ));
+    }
+    atlas.walk[d] = walk;
+    atlas.idle[d] = bakeMesh(
+      buildCharacter({ yaw, action: 'idle', t: 0, ...opts }), { outline: 1.5 },
+    );
   }
 
   /* ------------------------------------------------------------ helpers */
@@ -176,7 +326,8 @@ export class AssetForge {
     return {
       dirs: CHAR.dirs,
       walk: [],   // [dir][frame]
-      chop: [],   // [dir][frame]
+      chop: [],   // [dir][frame]  (ascia)
+      mine: [],   // [dir][frame]  (piccone)
       idle: [],   // [dir]
       opts: null,
     };
@@ -199,12 +350,26 @@ export class AssetForge {
         { outline: 1.6 },
       ));
     }
+    // Stessa animazione ma con il piccone in mano: serve solo per i frame di
+    // colpo, perché è lì che l'attrezzo si vede davvero.
+    const mine = [];
+    for (let f = 0; f < CHAR.chopFrames; f++) {
+      mine.push(bakeMesh(
+        buildCharacter({
+          yaw, action: 'chop', t: f / (CHAR.chopFrames - 1),
+          ...opts, tool: TOOL.PICK,
+        }),
+        { outline: 1.6 },
+      ));
+    }
+
     const idle = bakeMesh(
       buildCharacter({ yaw, action: 'idle', t: 0, ...opts }),
       { outline: 1.6 },
     );
     atlas.walk[d] = walk;
     atlas.chop[d] = chop;
+    atlas.mine[d] = mine;
     atlas.idle[d] = idle;
     atlas.opts = opts;
   }

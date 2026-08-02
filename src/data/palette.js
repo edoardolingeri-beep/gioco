@@ -57,6 +57,37 @@ export const PAL = {
   clothRed:   [214, 100,  92],
   clothBlue:  [ 92, 150, 214],
 
+  /* nemici */
+  wolfA:      [ 96, 102, 122],
+  wolfB:      [ 68,  74,  94],
+  wolfBelly:  [190, 194, 208],
+  wolfEye:    [255, 196,  84],
+  fang:       [250, 250, 250],
+
+  /* abitanti (varianti di vestiario) */
+  npcShirtA:  [214, 122,  96],
+  npcShirtB:  [126, 190, 128],
+  npcShirtC:  [176, 148, 216],
+  npcShirtD:  [232, 196, 108],
+  npcHairA:   [ 60,  44,  36],
+  npcHairB:   [172, 118,  56],
+  npcHairC:   [216, 204, 186],
+  npcSkinA:   [244, 194, 152],
+  npcSkinB:   [206, 152, 110],
+  npcSkinC:   [156, 108,  74],
+
+  /* villaggio (fase 2) */
+  fence:      [178, 134,  86],
+  fenceDark:  [146, 106,  66],
+  soil:       [122,  86,  58],
+  crop:       [130, 196,  86],
+  cropRipe:   [226, 190,  92],
+  roofWood:   [166, 104,  74],
+  roofWoodD:  [138,  82,  58],
+  canvasTan:  [214, 196, 162],
+  waterA:     [ 92, 168, 216],
+  waterB:     [ 66, 138, 190],
+
   /* varie */
   coin:       [255, 206,  84],
   coinDark:   [230, 168,  50],

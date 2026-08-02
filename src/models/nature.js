@@ -184,7 +184,7 @@ export function buildGrassPatch(rnd) {
     M.translate(t, rnd.sym(spread), 0, rnd.sym(spread * 0.8));
     M.merge(g, t);
   }
-  const flowers = rnd.int(0, 2);
+  const flowers = rnd.chance(0.45) ? 1 : 0;
   for (let i = 0; i < flowers; i++) {
     const f = buildFlower(rnd).mesh;
     M.scale(f, rnd.range(0.85, 1.15));
@@ -229,6 +229,61 @@ export function buildRock(rnd) {
   return { mesh: g, height: r * 1.3, radius: r * 0.9 };
 }
 
+/**
+ * Masso raccoglibile col piccone (Fase 2).
+ * Più grande e squadrato del sasso decorativo, con venature chiare che lo
+ * rendono riconoscibile a colpo d'occhio come "risorsa".
+ */
+export function buildOreRock(rnd) {
+  const g = M.mesh();
+  const s = rnd.range(0.85, 1.15);
+
+  // blocco principale: sfera deformata e sfaccettata
+  const core = M.sphere(0.52 * s, 7, 5, PAL.stone);
+  M.scale(core, 1.1, 0.86, 1);
+  M.warp(core, (x, y, z) => [
+    x + Math.sin(y * 7 + z * 3) * 0.06,
+    y,
+    z + Math.cos(x * 6 + y * 4) * 0.06,
+  ]);
+  M.translate(core, 0, 0.42 * s, 0);
+  M.merge(g, core);
+
+  // spuntoni secondari
+  const n = rnd.int(2, 3);
+  for (let i = 0; i < n; i++) {
+    const a = rnd.range(0, Math.PI * 2);
+    const r = rnd.range(0.18, 0.3) * s;
+    const b = M.sphere(r, 5, 4, mixRGB(PAL.stone, PAL.stoneDark, rnd.range(0.1, 0.6)));
+    M.scale(b, 1.2, 0.8, 1);
+    M.translate(b, Math.cos(a) * 0.42 * s, r * 0.7, Math.sin(a) * 0.38 * s);
+    M.merge(g, b);
+  }
+
+  // venature chiare
+  for (let i = 0; i < 3; i++) {
+    const v = M.box(rnd.range(0.1, 0.2) * s, 0.05, rnd.range(0.16, 0.3) * s, PAL.stoneLight);
+    M.rotY(v, rnd.range(0, 3.14));
+    M.translate(v, rnd.sym(0.28) * s, rnd.range(0.5, 0.78) * s, rnd.sym(0.24) * s);
+    M.merge(g, v);
+  }
+  return { mesh: g, height: 0.95 * s, radius: 0.62 * s };
+}
+
+/** Ciò che resta di un masso frantumato: ricrescerà. */
+export function buildRubble(rnd) {
+  const g = M.mesh();
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + rnd.sym(0.4);
+    const r = rnd.range(0.11, 0.19);
+    const s = M.sphere(r, 5, 3, mixRGB(PAL.stoneDark, PAL.stone, rnd.next()));
+    M.scale(s, 1.2, 0.6, 1);
+    M.translate(s, Math.cos(a) * 0.24, r * 0.35, Math.sin(a) * 0.2);
+    M.merge(g, s);
+  }
+  return { mesh: g, height: 0.22, radius: 0.34 };
+}
+
 /* ------------------------------------------------------- risorse a terra */
 
 /** Tronco a terra (drop raccoglibile). */
@@ -245,6 +300,31 @@ export function buildLogDrop() {
   M.merge(g, cap(1));
   M.translate(g, 0, 0.115, 0);
   return { mesh: g, height: 0.23, radius: 0.25 };
+}
+
+/** Blocco di pietra a terra (drop raccoglibile). */
+export function buildStoneDrop() {
+  const g = M.mesh();
+  const core = M.box(0.3, 0.22, 0.26, PAL.stone, { taper: 0.22 });
+  M.merge(g, core);
+  const top = M.box(0.22, 0.06, 0.2, PAL.stoneLight, { taper: 0.3 });
+  M.translate(top, 0, 0.2, 0);
+  M.merge(g, top);
+  const chip = M.box(0.12, 0.1, 0.11, PAL.stoneDark, { taper: 0.3 });
+  M.translate(chip, 0.14, 0.02, 0.1);
+  M.merge(g, chip);
+  M.translate(g, 0, 0.02, 0);
+  return { mesh: g, height: 0.28, radius: 0.22 };
+}
+
+/** Il blocco di pietra trasportato sulla schiena (impilabile). */
+export function buildCarriedStone() {
+  const g = M.box(0.44, 0.2, 0.34, PAL.stone, { taper: 0.16 });
+  const top = M.box(0.34, 0.05, 0.26, PAL.stoneLight, { taper: 0.2 });
+  M.translate(top, 0, 0.19, 0);
+  M.merge(g, top);
+  M.translate(g, 0, -0.1, 0);
+  return g;
 }
 
 /** Moneta (ruotata di taglio, stile arcade). */

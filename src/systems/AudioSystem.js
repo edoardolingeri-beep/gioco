@@ -151,4 +151,79 @@ export class AudioSystem {
   denied() {
     this._tone(200, 0.14, { type: 'sawtooth', gain: 0.12, slide: 0.7 });
   }
+
+  /* ------------------------------------------------------ Fase 2: pietra */
+
+  /** Picconata: più metallica e secca del colpo d'ascia. */
+  mine() {
+    const v = fxRand.range(0.92, 1.1);
+    this._noise(0.07, { freq: 2600 * v, q: 2.2, gain: 0.3, slide: 0.4 });
+    this._tone(340 * v, 0.09, { type: 'square', gain: 0.12, slide: 0.6 });
+    this._tone(150 * v, 0.14, { type: 'triangle', gain: 0.2, slide: 0.5 });
+  }
+
+  rockBreak() {
+    this._noise(0.5, { freq: 1200, q: 0.7, gain: 0.34, slide: 0.22 });
+    this._tone(110, 0.35, { type: 'triangle', gain: 0.24, slide: 0.5 });
+    this._noise(0.22, { freq: 3000, q: 1.5, gain: 0.14, delay: 0.05, slide: 0.3 });
+  }
+
+  /* ---------------------------------------------------- Fase 2: nemici */
+
+  /** Colpo andato a segno su un nemico. */
+  hitFlesh() {
+    this._noise(0.1, { freq: 700, q: 1, gain: 0.28, slide: 0.3, type: 'lowpass' });
+    this._tone(220, 0.1, { type: 'sawtooth', gain: 0.14, slide: 0.55 });
+  }
+
+  /** Fendente a vuoto: il fruscio dell'arma. */
+  swing() {
+    this._noise(0.13, { freq: 1800, q: 0.8, gain: 0.12, slide: 0.25 });
+  }
+
+  wolfHowl() {
+    this._tone(340, 0.5, { type: 'sawtooth', gain: 0.1, slide: 1.35 });
+    this._tone(170, 0.55, { type: 'triangle', gain: 0.09, slide: 1.3 });
+  }
+
+  wolfDie() {
+    this._tone(300, 0.4, { type: 'sawtooth', gain: 0.13, slide: 0.35 });
+    this._noise(0.3, { freq: 900, q: 0.8, gain: 0.16, slide: 0.35 });
+  }
+
+  /* --------------------------------------------------- Fase 2: giocatore */
+
+  playerHurt() {
+    this._tone(420, 0.16, { type: 'square', gain: 0.16, slide: 0.45 });
+    this._noise(0.18, { freq: 500, q: 0.9, gain: 0.2, slide: 0.4 });
+  }
+
+  faint() {
+    [0, 0.12, 0.26].forEach((d, i) => this._tone(360 / (i + 1), 0.4, {
+      type: 'triangle', gain: 0.18, delay: d, slide: 0.5,
+    }));
+  }
+
+  revive() {
+    [0, 0.09, 0.18].forEach((d, i) => this._tone(330 * Math.pow(2, i / 3), 0.32, {
+      type: 'sine', gain: 0.16, delay: d,
+    }));
+  }
+
+  /* -------------------------------------------------- Fase 2: villaggio */
+
+  /** Un arredo che spunta dal terreno. */
+  plant() {
+    this._noise(0.16, { freq: 900, q: 1.1, gain: 0.12, slide: 1.8 });
+    this._tone(520, 0.14, { type: 'sine', gain: 0.1, slide: 1.5 });
+  }
+
+  /** Fanfara del villaggio che sale di livello. */
+  villageGrow() {
+    [0, 0.1, 0.2, 0.32, 0.46].forEach((d, i) => this._tone(
+      392 * Math.pow(2, [0, 2, 4, 5, 7][i] / 12), 0.45,
+      { type: 'triangle', gain: 0.17, delay: d },
+    ));
+    this._noise(0.6, { freq: 2600, q: 1, gain: 0.1, slide: 1.8, delay: 0.1 });
+  }
 }

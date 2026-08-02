@@ -18,7 +18,8 @@ import { TreeEntity } from '../entities/TreeEntity.js';
 import { BuildingEntity } from '../entities/BuildingEntity.js';
 import { MerchantEntity } from '../entities/MerchantEntity.js';
 import { WorkbenchEntity } from '../entities/WorkbenchEntity.js';
-import { BUILDINGS } from '../data/buildings.js';
+import { RockEntity } from '../entities/RockEntity.js';
+import { BUILDINGS, BUILD_ORDER } from '../data/buildings.js';
 import { PAL } from '../data/palette.js';
 
 export class World {
@@ -39,6 +40,26 @@ export class World {
     if (dynamic || !e.static) this.dynamic.push(e);
     if (e.drawUI) this.uiEntities.push(e);
     return e;
+  }
+
+  /** Toglie definitivamente un'entità dal mondo (nemici abbattuti, ecc.). */
+  remove(e) {
+    this.grid.remove(e);
+    let i = this.dynamic.indexOf(e);
+    if (i >= 0) this.dynamic.splice(i, 1);
+    i = this.uiEntities.indexOf(e);
+    if (i >= 0) this.uiEntities.splice(i, 1);
+    e.dead = true;
+  }
+
+  /**
+   * Toglie un'entità dalla lista degli aggiornamenti lasciandola visibile:
+   * lo usano gli arredi una volta finita l'animazione di comparsa, così
+   * tornano a costare quanto una decorazione statica.
+   */
+  retire(e) {
+    const i = this.dynamic.indexOf(e);
+    if (i >= 0) this.dynamic.splice(i, 1);
   }
 
   /* ------------------------------------------------------- generazione */
@@ -101,6 +122,22 @@ export class World {
       }));
     }
 
+    /* --- massi di pietra (Fase 2): più fitti lontano dal villaggio --- */
+    let rocks = 0, rockGuard = 0;
+    while (rocks < W.rockCount && rockGuard++ < W.rockCount * 40) {
+      const a = rnd.range(0, Math.PI * 2);
+      const rr = Math.sqrt(rnd.next()) * W.radius;
+      const x = Math.cos(a) * rr, z = Math.sin(a) * rr;
+      if (rr < 11) continue;                       // niente cave dentro il villaggio
+      if (!rnd.chance(0.3 + (rr / W.radius) * 0.7)) continue;
+      if (this._blocked(x, z, 1.4)) continue;
+      this.add(new RockEntity(
+        x, z, rnd.pick(assets.oreRocks), rnd.pick(assets.rubble),
+        rnd.range(0.9, 1.2),
+      ));
+      rocks++;
+    }
+
     /* --- dettagli del terreno (nessuna collisione, nessun update) ---
        Le chiazze contengono già ciuffi, fiori e sassolini insieme: una sola
        sprite per una manciata di dettagli. */
@@ -128,10 +165,14 @@ export class World {
       solid: true, radius: 0.75, shadow: 0.7,
     }));
 
-    /* --- edifici e personaggi chiave --- */
-    this.hut = this.add(new BuildingEntity(
-      this.hutSpot.x, this.hutSpot.z, BUILDINGS.hut, this.game,
-    ), true);
+    /* --- cantieri: uno per ogni edificio della progressione --- */
+    this.buildings = {};
+    for (const id of BUILD_ORDER) {
+      const def = BUILDINGS[id];
+      const b = new BuildingEntity(def.spot.x, def.spot.z, def, this.game);
+      this.buildings[id] = this.add(b, true);
+    }
+    this.hut = this.buildings.hut;
     this.merchant = this.add(new MerchantEntity(
       this.merchantSpot.x, this.merchantSpot.z, this.game,
     ), true);
@@ -168,12 +209,15 @@ export class World {
       if (d < r + e.radius * 0.8) return true;
     }
     // non ostruire i sentieri principali
-    if (this._nearSpot(x, z, 2.4)) return true;
+    if (this._nearSpot(x, z, 3.2)) return true;
     return false;
   }
 
   _nearSpot(x, z, r) {
-    const spots = [this.hutSpot, this.merchantSpot, this.benchSpot, { x: 0, z: 0 }];
+    const spots = this._spots || (this._spots = [
+      this.hutSpot, this.merchantSpot, this.benchSpot, { x: 0, z: 0 },
+      ...BUILD_ORDER.map((id) => BUILDINGS[id].spot),
+    ]);
     for (const s of spots) {
       if (!s) continue;
       if (Math.hypot(s.x - x, s.z - z) < r) return true;

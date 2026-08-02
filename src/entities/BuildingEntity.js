@@ -12,7 +12,7 @@
 import { Entity } from './Entity.js';
 import { CFG } from '../data/config.js';
 import { RESOURCE_INFO } from '../data/buildings.js';
-import { drawPanel } from '../ui/WorldUI.js';
+import { drawPanel, drawRing } from '../ui/WorldUI.js';
 import { clamp, damp, easeOutBack, easeOutCubic } from '../core/MathUtils.js';
 
 export const BUILD_STATE = { BLUEPRINT: 0, RISING: 1, DONE: 2 };
@@ -34,6 +34,12 @@ export class BuildingEntity extends Entity {
     /** Risorse già consegnate. */
     this.paid = {};
     for (const k in def.cost) this.paid[k] = 0;
+
+    /** Il cantiere compare solo dopo che il prerequisito è stato completato. */
+    this.available = !def.requires;
+    /** Se costa monete, va prima "aperto". */
+    this.unlocked = !def.unlockCost;
+    this.unlockCharge = 0;
 
     this.playerInside = false;
     this.panelT = 0;          // apparizione del pannello
@@ -67,12 +73,19 @@ export class BuildingEntity extends Entity {
   }
 
   update(dt, game) {
+    if (!this.available) return;
     this.ghostPhase += dt;
     this.pulse = damp(this.pulse, 0, 7, dt);
 
     const p = game.player;
     const d2 = (p.x - this.x) ** 2 + (p.z - this.z) ** 2;
     const inside = d2 < this.zone * this.zone;
+
+    if (this.state === BUILD_STATE.BLUEPRINT && !this.unlocked) {
+      this.panelT = damp(this.panelT, d2 < (this.zone + 6) ** 2 ? 1 : 0, 7, dt);
+      this._updateUnlock(dt, game, inside);
+      return;
+    }
 
     if (this.state === BUILD_STATE.BLUEPRINT) {
       // Il pannello compare solo quando sei nei paraggi: da lontano
@@ -97,6 +110,40 @@ export class BuildingEntity extends Entity {
       }
       if (this.riseT >= 1) this._finish(game);
     }
+  }
+
+  /**
+   * Apertura del cantiere pagando in monete.
+   * Come al banco dell'artigiano serve restare fermi un istante: evita di
+   * spendere per sbaglio solo passando di lì.
+   */
+  _updateUnlock(dt, game, inside) {
+    const cost = this.def.unlockCost;
+    if (inside && game.stats.coins >= cost) {
+      const prev = this.unlockCharge;
+      this.unlockCharge = clamp(this.unlockCharge + dt * 1.9, 0, 1);
+      if (Math.floor(prev * 8) !== Math.floor(this.unlockCharge * 8)) {
+        game.audio.pop(Math.floor(this.unlockCharge * 8));
+        game.haptics.fire('light', 60);
+      }
+      if (this.unlockCharge >= 1) this._unlock(game);
+    } else {
+      this.unlockCharge = damp(this.unlockCharge, 0, 8, dt);
+    }
+  }
+
+  _unlock(game) {
+    this.unlocked = true;
+    this.unlockCharge = 0;
+    game.spendCoins(this.def.unlockCost);
+    game.audio.upgrade();
+    game.haptics.fire('success', 0);
+    game.cam.addShake(0.25);
+    game.fx.sparks(this.x, 1.2, this.z, 18, 'rgba(140,220,255,1)', 1.1);
+    game.texts.spawn(`${this.def.name} sbloccata!`, this.x, 2.8, this.z, {
+      color: '#9ed8ff', size: 1.15, life: 1.5,
+    });
+    game.bus.emit('building:unlocked', this);
   }
 
   /** Consegna automatica delle risorse trasportate. */
@@ -153,18 +200,20 @@ export class BuildingEntity extends Entity {
     game.fx.puff(this.x, 0.05, this.z, 14, 'rgba(230,216,190,0.9)', this.radius * 2.2, 0.45);
     game.audio.upgrade();
     game.texts.spawn(this.def.name, this.x, 2.6, this.z, { color: '#ffe9a8', size: 1.3, life: 1.6 });
+    this.def.effect?.(game.stats);
     this.def.onComplete?.(game);
     game.bus.emit('building:done', this);
   }
 
   draw(r, game) {
+    if (!this.available) return;
     const A = game.assets;
     const sp = A.buildings[this.def.sprite];
     if (!sp) return;
 
     if (this.state === BUILD_STATE.BLUEPRINT) {
       const ghost = A.buildings[this.def.sprite + 'Ghost'] ?? sp;
-      const ratio = this.paidTotal / this.costTotal;
+      const ratio = this.unlocked ? this.paidTotal / this.costTotal : 0;
       // il fantasma "respira" e si riempie dal basso
       const breathe = 0.86 + Math.sin(this.ghostPhase * 2.2) * 0.06;
       r.shadow(this.x, this.z, this.radius * 0.95, 0.5);
@@ -205,7 +254,28 @@ export class BuildingEntity extends Entity {
 
   /** Interfaccia (pannello) disegnata dopo il mondo. */
   drawUI(ctx, cam, dpr, game) {
+    if (!this.available) return;
     if (this.state !== BUILD_STATE.BLUEPRINT || this.panelT < 0.02) return;
+
+    // Cantiere ancora da aprire: mostra il prezzo in monete.
+    if (!this.unlocked) {
+      const cost = this.def.unlockCost;
+      const can = game.stats.coins >= cost;
+      drawPanel(ctx, cam, dpr, this.x, 2.7, this.z, {
+        title: `🔒 ${this.def.name}`,
+        value: Math.min(game.stats.coins, cost),
+        max: cost,
+        icon: '🪙',
+        color: can ? '#6ee7a0' : '#ffce54',
+        appear: this.panelT,
+        width: 152,
+      });
+      if (this.unlockCharge > 0.01) {
+        drawRing(ctx, cam, dpr, this.x, 1.9, this.z, this.unlockCharge, '#6ee7a0');
+      }
+      return;
+    }
+
     const type = this.missingType() ?? 'wood';
     const info = RESOURCE_INFO[type];
     drawPanel(ctx, cam, dpr, this.x, 2.7 + this.pulse * 0.12, this.z, {

@@ -24,11 +24,14 @@ import { FloatingText } from '../systems/FloatingText.js';
 import { AudioSystem } from '../systems/AudioSystem.js';
 import { Haptics } from '../systems/Haptics.js';
 import { QualityManager } from '../systems/QualityManager.js';
+import { VillageSystem } from '../systems/VillageSystem.js';
+import { EnemySpawner } from '../systems/EnemySpawner.js';
 import { HUD } from '../ui/HUD.js';
 import { Joystick } from '../ui/Joystick.js';
 import { drawOffscreenArrow } from '../ui/WorldUI.js';
 import { fxRand } from './Rand.js';
 import { BUILD_STATE } from '../entities/BuildingEntity.js';
+import { BUILD_ORDER, BUILDINGS } from '../data/buildings.js';
 
 const SAVE_KEY = 'gioco.save.v1';
 
@@ -59,11 +62,19 @@ export class Game {
     /** Statistiche del giocatore (modificate dai potenziamenti). */
     this.stats = {
       coins: 0,
-      axeLevel: 1, bagLevel: 1, bootsLevel: 1,
+      // livelli di equipaggiamento
+      axeLevel: 1, pickLevel: 0, bagLevel: 1, bootsLevel: 1, armorLevel: 1,
+      hasPick: false,
+      // valori derivati (ricalcolati da recomputeStats)
       capacity: CFG.carry.baseCapacity,
       speedMul: 1,
-      axeDamage: 1, chopSpeed: 1,
-      treesChopped: 0, upgradeIndex: 0,
+      axeDamage: 1, pickDamage: 1,
+      chopSpeed: 1, mineSpeed: 1,
+      attackDamage: CFG.player.baseDamage,
+      // bonus concessi dagli edifici
+      logBonus: 0, stoneBonus: 0, warehouseBonus: 0,
+      // contatori
+      treesChopped: 0, rocksMined: 0, wolvesKilled: 0, upgradeIndex: 0,
     };
 
     this.time = 0;
@@ -82,9 +93,16 @@ export class Game {
     window.addEventListener('resize', () => this.resize());
     window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 120));
 
+    this.village = new VillageSystem(this);
+    this.spawner = new EnemySpawner(this);
+
     this.world = new World(this);
     this.world.generate(this.assets, this.cam.basePPU);
     this.grid = this.world.grid;
+
+    // punti d'interesse iniziali per gli abitanti: il falò e il mercante
+    this.village.addPOI(0, 1.6, 'work', 1.4);
+    this.village.addPOI(this.world.merchantSpot.x - 0.4, this.world.merchantSpot.z + 1.9, 'work', 1.2);
 
     this.player = new Player(0, 3.2, this);
     this.world.add(this.player, true);
@@ -116,8 +134,28 @@ export class Game {
       });
     });
 
-    this.bus.on('building:done', () => {
-      this.hud.toast('Capanna costruita! Il villaggio è nato 🏡');
+    // Ogni edificio completato fa crescere il villaggio e apre il cantiere
+    // successivo: è il motore dell'evoluzione del mondo.
+    this.bus.on('building:done', (b) => {
+      this.hud.toast(`${b.def.name} costruita!${b.def.perk ? ' ' + b.def.perk : ''} 🏡`);
+      this.recomputeStats();
+      this.village.levelUp();
+      this._unlockNextSite(b.def.id);
+      this.spawner.enable();
+      this.save();
+    });
+
+    this.bus.on('enemy:killed', (e) => {
+      const reward = CFG.enemies.wolf.reward;
+      this.stats.wolvesKilled++;
+      this.addCoins(reward, e.x, 1.2, e.z);
+      this.audio.coin(0);
+    });
+
+    this.bus.on('player:faint', (lost) => {
+      this.hud.toast(lost > 0
+        ? `Sei svenuto! Hai perso ${lost} risorse 💫`
+        : 'Sei svenuto! Riposa al falò 💫');
     });
     this.bus.on('upgrade:bought', (u) => {
       this.hud.toast(`${u.icon} ${u.label} sbloccato!`);
@@ -125,6 +163,20 @@ export class Game {
       this.recomputeStats();
       this.save();
     });
+  }
+
+  /** Rende visibile il cantiere che richiedeva l'edificio appena finito. */
+  _unlockNextSite(doneId) {
+    for (const id of BUILD_ORDER) {
+      const def = BUILDINGS[id];
+      if (def.requires !== doneId) continue;
+      const b = this.world.buildings[id];
+      if (!b || b.available) continue;
+      b.available = true;
+      this.fx.sparks(b.x, 1.4, b.z, 20, 'rgba(140,220,255,1)', 1.2);
+      this.audio.plant();
+      this.hud.toast(`Nuovo progetto disponibile: ${def.name}`);
+    }
   }
 
   resize() {
@@ -156,8 +208,21 @@ export class Game {
     const s = this.stats;
     s.axeDamage = [0, 1, 1.6, 2.4][s.axeLevel] ?? 1;
     s.chopSpeed = 1 + (s.axeLevel - 1) * 0.14;
-    s.capacity = CFG.carry.baseCapacity + (s.bagLevel - 1) * 8;
+    s.pickDamage = [0, 1, 1.9][s.pickLevel] ?? 1;
+    s.mineSpeed = 1 + Math.max(0, s.pickLevel - 1) * 0.2;
+    s.capacity = CFG.carry.baseCapacity
+      + (s.bagLevel - 1) * (s.bagLevel >= 3 ? 9 : 8)
+      + s.warehouseBonus;
     s.speedMul = 1 + (s.bootsLevel - 1) * 0.22;
+    s.attackDamage = CFG.player.baseDamage * (1 + (s.axeLevel - 1) * 0.45);
+
+    if (this.player) {
+      const maxHp = CFG.player.maxHp * (1 + (s.armorLevel - 1) * 0.5);
+      // se aumenta la salute massima, il bonus è subito disponibile
+      const gain = maxHp - this.player.maxHp;
+      this.player.maxHp = maxHp;
+      if (gain > 0) this.player.hp = Math.min(maxHp, this.player.hp + gain);
+    }
     this.carry.setCapacity(s.capacity);
   }
 
@@ -165,7 +230,11 @@ export class Game {
   rebakeCharacter() {
     this.rebaker = new CharacterRebaker(
       this.forge, this.assets,
-      { axeLevel: this.stats.axeLevel, bagLevel: this.stats.bagLevel },
+      {
+        axeLevel: this.stats.axeLevel,
+        bagLevel: this.stats.bagLevel,
+        pickLevel: Math.max(1, this.stats.pickLevel),
+      },
       () => { this.rebaker = null; },
     );
   }
@@ -174,7 +243,7 @@ export class Game {
 
   /** Genera i tronchi quando un albero tocca terra. */
   spawnLogs(tree) {
-    const n = CFG.harvest.logsPerTree;
+    const n = CFG.harvest.logsPerTree + this.stats.logBonus;
     const ang = tree.fallDir * Math.PI * 0.5;
     const cx = tree.x + Math.sin(ang) * tree.spriteTopY * 0.35;
     const cz = tree.z + tree.spriteTopY * 0.08;
@@ -190,6 +259,21 @@ export class Game {
     this.bus.emit('tree:felled', tree);
   }
 
+  /** Genera i blocchi quando un masso viene frantumato. */
+  spawnStones(rock) {
+    const n = CFG.harvest.stonePerRock + this.stats.stoneBonus;
+    for (let i = 0; i < n; i++) {
+      const p = this.pickups.spawn(
+        'stone',
+        rock.x + fxRand.sym(0.3), 0.5, rock.z + fxRand.sym(0.3),
+        fxRand.sym(0.5), fxRand.sym(0.5), 0.8,
+      );
+      p.age = -i * 0.05;
+    }
+    this.stats.rocksMined++;
+    this.bus.emit('rock:mined', rock);
+  }
+
   /* --------------------------------------------------------------- update */
 
   update(dt) {
@@ -197,6 +281,7 @@ export class Game {
     this.input.update();
 
     this.world.update(dt, this);
+    this.spawner.update(dt, this);
     this.carry.update(dt);
     this.pickups.update(dt);
     this.delivery.update(dt);
@@ -250,8 +335,15 @@ export class Game {
 
   _drawGuides(ctx, cam, dpr) {
     const w = this.world;
-    if (w.hut && w.hut.state === BUILD_STATE.BLUEPRINT && this.carry.total > 0) {
-      drawOffscreenArrow(ctx, cam, dpr, w.hut.x, w.hut.z, '#7cc8ff', '🏠');
+    // freccia verso il cantiere attivo (il primo non ancora completato)
+    if (this.carry.total > 0) {
+      for (const id of BUILD_ORDER) {
+        const b = w.buildings[id];
+        if (b && b.available && b.unlocked && b.state === BUILD_STATE.BLUEPRINT) {
+          drawOffscreenArrow(ctx, cam, dpr, b.x, b.z, '#7cc8ff', '🏠');
+          break;
+        }
+      }
     }
     if (w.merchant && this.carry.isFull) {
       drawOffscreenArrow(ctx, cam, dpr, w.merchant.x, w.merchant.z, '#ffce54', '🪙');
@@ -279,15 +371,32 @@ export class Game {
   save() {
     try {
       const w = this.world;
+      const buildings = {};
+      for (const id of BUILD_ORDER) {
+        const b = w.buildings[id];
+        buildings[id] = {
+          state: b.state, paid: b.paid,
+          available: b.available, unlocked: b.unlocked,
+        };
+      }
       const data = {
-        v: 1,
+        v: 2,
         coins: this.stats.coins,
         axeLevel: this.stats.axeLevel,
+        pickLevel: this.stats.pickLevel,
+        hasPick: this.stats.hasPick,
         bagLevel: this.stats.bagLevel,
         bootsLevel: this.stats.bootsLevel,
+        armorLevel: this.stats.armorLevel,
+        logBonus: this.stats.logBonus,
+        stoneBonus: this.stats.stoneBonus,
+        warehouseBonus: this.stats.warehouseBonus,
         upgradeIndex: w.workbench.index,
         treesChopped: this.stats.treesChopped,
-        hut: { state: w.hut.state, paid: w.hut.paid },
+        rocksMined: this.stats.rocksMined,
+        wolvesKilled: this.stats.wolvesKilled,
+        villageLevel: this.village.level,
+        buildings,
         player: { x: this.player.x, z: this.player.z },
         carry: this.carry.stack.map((s) => s.type),
       };
@@ -298,26 +407,47 @@ export class Game {
   load() {
     let data = null;
     try { data = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch { data = null; }
-    if (!data || data.v !== 1) { this.recomputeStats(); return; }
+    // I salvataggi della Fase 1 restano validi: i campi nuovi prendono il
+    // valore predefinito e la partita riprende senza perdere nulla.
+    if (!data || (data.v !== 1 && data.v !== 2)) { this.recomputeStats(); return; }
 
     const s = this.stats;
     s.coins = data.coins ?? 0;
     s.axeLevel = data.axeLevel ?? 1;
+    s.pickLevel = data.pickLevel ?? 0;
+    s.hasPick = data.hasPick ?? false;
     s.bagLevel = data.bagLevel ?? 1;
     s.bootsLevel = data.bootsLevel ?? 1;
+    s.armorLevel = data.armorLevel ?? 1;
+    s.logBonus = data.logBonus ?? 0;
+    s.stoneBonus = data.stoneBonus ?? 0;
+    s.warehouseBonus = data.warehouseBonus ?? 0;
     s.treesChopped = data.treesChopped ?? 0;
+    s.rocksMined = data.rocksMined ?? 0;
+    s.wolvesKilled = data.wolvesKilled ?? 0;
     this.recomputeStats();
 
     const w = this.world;
     w.workbench.index = data.upgradeIndex ?? 0;
 
-    if (data.hut) {
-      Object.assign(w.hut.paid, data.hut.paid ?? {});
-      if (data.hut.state === BUILD_STATE.DONE || w.hut.complete) {
-        w.hut.state = BUILD_STATE.DONE;
-        w.hut.solid = true;
+    // stato dei cantieri
+    const saved = data.buildings ?? (data.hut ? { hut: data.hut } : {});
+    for (const id of BUILD_ORDER) {
+      const b = w.buildings[id];
+      const sv = saved[id];
+      if (!b || !sv) continue;
+      Object.assign(b.paid, sv.paid ?? {});
+      if (sv.available != null) b.available = sv.available;
+      if (sv.unlocked != null) b.unlocked = sv.unlocked;
+      if (sv.state === BUILD_STATE.DONE || (b.unlocked && b.complete)) {
+        b.state = BUILD_STATE.DONE;
+        b.solid = true;
       }
     }
+
+    // il villaggio torna al livello raggiunto, senza rigiocare le animazioni
+    const lvl = data.villageLevel ?? (saved.hut?.state === BUILD_STATE.DONE ? 1 : 0);
+    if (lvl > 0) { this.village.restore(lvl); this.spawner.enable(); }
     if (data.player) {
       this.player.x = data.player.x;
       this.player.z = data.player.z;
@@ -326,7 +456,7 @@ export class Game {
     }
     for (const t of data.carry ?? []) this.carry.add(t, 1);
     // il personaggio potrebbe avere attrezzi diversi da quelli cotti all'avvio
-    if (s.axeLevel > 1 || s.bagLevel > 1) this.rebakeCharacter();
+    if (s.axeLevel > 1 || s.bagLevel > 1 || s.hasPick) this.rebakeCharacter();
   }
 
   reset() {

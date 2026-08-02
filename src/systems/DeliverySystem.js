@@ -78,7 +78,9 @@ export class DeliverySystem {
     const list = this.pool.active;
     for (let i = 0; i < list.length; i++) {
       const f = list[i];
-      const sp = f.kind === 'coin' ? assets.coin : assets.logDrop;
+      const sp = f.kind === 'coin' ? assets.coin
+        : f.kind === 'stone' ? assets.stoneDrop
+        : assets.logDrop;
       r.sprite(sp, f.x, f.y, f.z, {
         rot: f.rot * 0.4,
         // volano sopra a tutto: profondità alta per stare in primo piano

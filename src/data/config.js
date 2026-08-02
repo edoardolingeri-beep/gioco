@@ -45,6 +45,14 @@ export const CFG = {
     // Distanza entro cui si iniziano automaticamente le azioni.
     actionRange: 1.45,
     height: 1.55,
+    // Salute e combattimento (Fase 2)
+    maxHp: 100,
+    regenDelay: 5,      // secondi senza danni prima di rigenerare
+    regenRate: 7,       // punti al secondo
+    invulnTime: 0.6,    // invulnerabilità dopo un colpo
+    attackRange: 1.5,
+    attackInterval: 0.5,
+    baseDamage: 12,
   },
 
   /* ------------------------------------------------------------- inventario */
@@ -66,6 +74,10 @@ export const CFG = {
     logsPerTree: 3,
     treeRegrowDelay: 22,  // secondi prima che il ceppo ributti
     treeGrowTime: 3.5,
+    // Pietra (Fase 2)
+    rockHits: 6,          // picconate con il piccone di livello 1
+    stonePerRock: 2,
+    rockRegrowDelay: 30,
   },
 
   /* --------------------------------------------------------------- pickups */
@@ -87,7 +99,43 @@ export const CFG = {
 
   /* -------------------------------------------------------------- economia */
   economy: {
-    prices: { wood: 2, stone: 4, iron: 9, gold: 20 },
+    prices: { wood: 2, stone: 5, iron: 9, gold: 20 },
+  },
+
+  /* ------------------------------------------------------------- villaggio */
+  village: {
+    fenceRadius: 8.6,     // raggio della staccionata perimetrale
+    fenceSegments: 44,
+    safeRadius: 10,       // dentro questo raggio i nemici non compaiono
+  },
+
+  /* -------------------------------------------------------------- abitanti */
+  npc: {
+    speed: 1.85,
+    maxCount: 18,
+  },
+
+  /* ---------------------------------------------------------------- nemici */
+  enemies: {
+    firstWaveDelay: 25,
+    spawnInterval: [14, 26],
+    baseMax: 2,
+    maxTotal: 7,
+    minSpawnDist: 9,
+    maxSpawnDist: 22,
+    wolf: {
+      hp: 34,
+      speed: 3.5,
+      damage: 9,
+      aggroRange: 7.5,
+      leashRange: 15,
+      attackRange: 1.25,
+      attackTime: 0.55,
+      attackCooldown: 1.15,
+      wanderRadius: 6,
+      stealChance: 0.35,
+      reward: 4,          // monete per ogni lupo abbattuto
+    },
   },
 
   /* ----------------------------------------------------------------- mondo */
@@ -99,8 +147,9 @@ export const CFG = {
     bushCount: 260,
     // La telecamera è ravvicinata: serve molta densità di dettagli, ma ogni
     // "chiazza" ne contiene già 5-9 in un'unica sprite (vedi buildGrassPatch).
+    rockCount: 90,        // massi raccoglibili col piccone (Fase 2)
     patchCount: 1100,
-    flowerCount: 320,
+    flowerCount: 130,
     pebbleCount: 260,
     cellSize: 4,         // dimensione cella della griglia spaziale
   },
@@ -128,7 +177,11 @@ export function idealPPU(cssWidth, dpr) {
   return css * dpr;
 }
 
-/** Livelli di potenziamento (Fase 1). Ognuno cambia anche il modello 3D. */
+/**
+ * Potenziamenti, in ordine di sblocco.
+ * Ognuno cambia anche il modello 3D del personaggio: il piccone compare
+ * davvero in mano, lo zaino diventa più grande, l'ascia più imponente.
+ */
 export const UPGRADES = [
   {
     id: 'axe2', label: 'Ascia di Ferro', desc: 'Abbatti gli alberi più in fretta',
@@ -136,18 +189,38 @@ export const UPGRADES = [
     apply: (s) => { s.axeLevel = 2; },
   },
   {
+    id: 'pick1', label: 'Piccone', desc: 'Ora puoi rompere la pietra',
+    cost: 55, icon: '⛏️',
+    apply: (s) => { s.pickLevel = 1; s.hasPick = true; },
+  },
+  {
     id: 'bag1', label: 'Zaino Robusto', desc: '+8 di capienza',
-    cost: 60, icon: '🎒',
-    apply: (s) => { s.bagLevel = 2; s.capacity += 8; },
+    cost: 85, icon: '🎒',
+    apply: (s) => { s.bagLevel = 2; },
   },
   {
     id: 'boots1', label: 'Stivali Leggeri', desc: 'Ti muovi più veloce',
-    cost: 90, icon: '👢',
-    apply: (s) => { s.bootsLevel = 2; s.speedMul = 1.22; },
+    cost: 120, icon: '👢',
+    apply: (s) => { s.bootsLevel = 2; },
   },
   {
-    id: 'axe3', label: 'Ascia d\'Acciaio', desc: 'Un albero in due colpi',
-    cost: 140, icon: '⚒️',
+    id: 'armor1', label: 'Giubba di Cuoio', desc: 'Più salute contro i lupi',
+    cost: 160, icon: '🛡️',
+    apply: (s) => { s.armorLevel = 2; },
+  },
+  {
+    id: 'axe3', label: 'Ascia d\'Acciaio', desc: 'Alberi in due colpi, e fa più male',
+    cost: 210, icon: '⚒️',
     apply: (s) => { s.axeLevel = 3; },
+  },
+  {
+    id: 'pick2', label: 'Piccone d\'Acciaio', desc: 'La pietra si sbriciola',
+    cost: 260, icon: '🔨',
+    apply: (s) => { s.pickLevel = 2; },
+  },
+  {
+    id: 'bag2', label: 'Zaino da Carico', desc: '+10 di capienza',
+    cost: 340, icon: '🧳',
+    apply: (s) => { s.bagLevel = 3; },
   },
 ];

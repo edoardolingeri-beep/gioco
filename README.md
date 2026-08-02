@@ -9,7 +9,7 @@ libreria di gioco) e impacchettato come **app nativa** con Capacitor.
 
 ---
 
-## Stato: Fase 1 completa ✅
+## Stato: Fasi 1 e 2 complete ✅
 
 La prima fase è quella che il resto del gioco userà come fondamenta, quindi è
 stata rifinita fino in fondo prima di proseguire:
@@ -30,8 +30,24 @@ stata rifinita fino in fondo prima di proseguire:
 | Salvataggio automatico dei progressi | ✅ |
 | Qualità adattiva per tenere alti gli FPS | ✅ |
 
-Le fasi successive (villaggio → paese → città → metropoli, nemici, NPC, nuovi
-biomi) sono descritte in fondo: l'architettura è già predisposta.
+### Fase 2 — Il villaggio prende vita
+
+| Funzionalità | Stato |
+|---|---|
+| **Pietra**: massi da frantumare col piccone | ✅ |
+| Piccone che compare davvero in mano (nuova animazione) | ✅ |
+| Cantieri a catena: segheria → cava → casa → magazzino | ✅ |
+| Cantieri da **sbloccare con le monete** prima di costruirli | ✅ |
+| Ogni edificio dà un bonus reale (+risorse, +capienza) | ✅ |
+| **Il villaggio cresce da solo**: 5 livelli, arredi che spuntano | ✅ |
+| Staccionata perimetrale con cancello | ✅ |
+| **Abitanti** che camminano, lavorano, si siedono e chiacchierano | ✅ |
+| **Lupi**: ti avvistano, ti inseguono, mordono e rubano risorse | ✅ |
+| Combattimento automatico, salute, svenimento senza game over | ✅ |
+| 8 potenziamenti, tutti visibili sul modello del personaggio | ✅ |
+
+Le fasi successive (paese → città → metropoli, nuovi biomi) sono descritte in
+fondo: l'architettura è già predisposta.
 
 ---
 
@@ -42,6 +58,10 @@ Non ci sono menù: **tutto succede nel mondo**.
 - **Muoversi** — appoggia il dito ovunque sullo schermo: nasce lì un joystick.
   Su desktop: `WASD` o frecce.
 - **Tagliare** — avvicinati a un albero e fermati: il personaggio inizia da solo.
+- **Scavare** — stessa cosa con i massi di pietra, ma serve il **piccone**
+  (si compra al banco dell'artigiano). Senza, un fumetto te lo ricorda.
+- **Combattere** — quando un lupo ti arriva addosso attacchi da solo. Se cadi
+  non è un game over: ti risvegli al falò avendo perso metà del carico.
 - **Raccogliere** — i tronchi si impilano automaticamente sulla schiena.
   Più ne porti, più la catasta è alta (e più sei lento).
 - **Costruire** — entra nell'area del progetto azzurro: i materiali partono da
@@ -49,6 +69,11 @@ Non ci sono menù: **tutto succede nel mondo**.
 - **Vendere** — entra nell'area del mercante: le risorse diventano monete.
 - **Potenziare** — vai al banco dell'artigiano con abbastanza monete e resta
   fermo un istante.
+- **Sbloccare cantieri** — i progetti chiusi 🔒 si aprono pagando in monete,
+  sempre restando fermi un attimo nell'area.
+
+Ogni edificio completato fa **salire di livello il villaggio**: spuntano orti,
+panchine, pozzi, bracieri e staccionate, e arrivano nuovi abitanti.
 
 ---
 
@@ -136,17 +161,24 @@ src/
     Renderer.js            draw-list ordinata per profondità + blit
 
   models/                  le mesh del gioco, generate da codice
-    character.js           rig animato del personaggio (+ ascia e zaino)
-    nature.js              alberi, cespugli, chiazze di prato, sassi, risorse
+    character.js           rig animato, parametrico (attrezzi, vestiario)
+    nature.js              alberi, cespugli, chiazze di prato, massi, risorse
     buildings.js           capanna, bancarella, banco dell'artigiano…
+    village.js             segheria, cava, casa, magazzino e arredi
+    enemies.js             rig animato del lupo
 
   world/
     World.js               generazione della mappa e gestione delle entità
     Terrain.js             terreno a pattern + decalcomanie (radure, sentieri)
 
   entities/                oggetti del mondo, tutti con update/draw
-    Entity.js  Player.js  TreeEntity.js
-    BuildingEntity.js  MerchantEntity.js  WorkbenchEntity.js
+    Entity.js  Player.js
+    TreeEntity.js  RockEntity.js          risorse raccoglibili
+    BuildingEntity.js                     cantiere → edificio
+    MerchantEntity.js  WorkbenchEntity.js
+    NPCEntity.js                          abitanti con routine
+    WolfEntity.js                         nemici
+    GrowProp.js                           arredi che spuntano dal terreno
 
   systems/                 meccaniche trasversali
     CarrySystem.js         zaino e catasta ordinata sulla schiena
@@ -157,6 +189,8 @@ src/
     AudioSystem.js         effetti sonori sintetizzati (nessun file audio)
     Haptics.js             vibrazione nativa (Capacitor) o web
     QualityManager.js      risoluzione adattiva in base agli FPS
+    VillageSystem.js       livelli del villaggio ed evoluzione del mondo
+    EnemySpawner.js        ondate di nemici, con zone sicure
 
   ui/
     HUD.js                 indicatori, toast, pannello opzioni (DOM)
@@ -170,8 +204,10 @@ src/
     config.js  palette.js  buildings.js
 
 tools/                     strumenti di sviluppo (Playwright)
-    smoke-test.cjs         verifica end-to-end del ciclo di gioco
+    smoke-test.cjs         verifica end-to-end del ciclo di Fase 1
+    phase2-test.cjs        verifica di pietra, cantieri, villaggio, lupi
     screenshots.cjs        cattura i momenti chiave
+    phase2-shots.cjs       porta la partita a villaggio completo
     perf.cjs               profila il costo del frame
     make-icons.cjs         genera icone e splash
 ```
@@ -222,8 +258,6 @@ Altre scelte pensate per il telefono:
 L'architettura è già pronta per crescere: ogni fase aggiunge moduli senza
 riscrivere quelli esistenti.
 
-- **Fase 2 — Villaggio**: pietra e cava, case, recinzioni, mercato, primi
-  abitanti (NPC con routine), lupi e cinghiali.
 - **Fase 3 — Paese**: strade in pietra, mulino, fabbro, ponte, carri, ferro.
 - **Fase 4 — Città**: asfalto, negozi, lampioni, parco, fontane, folla di NPC.
 - **Fase 5 — Metropoli**: grattacieli, auto, semafori, tram.
@@ -231,9 +265,11 @@ riscrivere quelli esistenti.
   ghiacciaio, vulcano, isole), nemici con IA, combattimento automatico,
   potenziamenti avanzati.
 
-Il cambio di fase è già modellato come evento (`village:grew`): ogni edificio
-completato fa avanzare il mondo, e la trasformazione avviene gradualmente
-davanti al giocatore.
+Il motore dell'evoluzione è già in funzione: `VillageSystem` tiene un livello
+che sale a ogni costruzione completata, e ogni livello elenca in `STAGES` gli
+arredi e gli abitanti che devono comparire. Aggiungere una fase significa
+aggiungere voci a quella tabella e i relativi modelli — la logica di crescita,
+di comparsa animata e delle routine degli abitanti resta la stessa.
 
 ---
 

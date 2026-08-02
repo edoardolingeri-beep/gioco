@@ -13,6 +13,8 @@ import { Entity } from './Entity.js';
 import { CFG } from '../data/config.js';
 import { CHAR } from '../models/character.js';
 import { TreeEntity, TREE_STATE } from './TreeEntity.js';
+import { RockEntity, ROCK_STATE } from './RockEntity.js';
+import { WolfEntity } from './WolfEntity.js';
 import { depthOf } from '../render/Projection.js';
 import { clamp, damp, angleTowards, angleDelta, TAU, easeOutBack } from '../core/MathUtils.js';
 
@@ -40,6 +42,75 @@ export class Player extends Entity {
 
     this.stepPhase = 0;
     this.squash = 1;
+
+    /* --- salute e combattimento (Fase 2) --- */
+    this.maxHp = CFG.player.maxHp;
+    this.hp = this.maxHp;
+    this.alive = true;
+    this.invuln = 0;
+    this.sinceDamage = 99;
+    this.hurtFlash = 0;
+    this.attackTimer = 0;
+    this.enemyTarget = null;
+    this.reviveT = 0;
+  }
+
+  /* ------------------------------------------------------------- salute */
+
+  /** Subisce danno da un nemico. */
+  takeDamage(n, fromX, fromZ, game) {
+    if (!this.alive || this.invuln > 0) return;
+    this.hp -= n;
+    this.invuln = CFG.player.invulnTime;
+    this.sinceDamage = 0;
+    this.hurtFlash = 1;
+
+    // contraccolpo: si sente il colpo
+    const dx = this.x - fromX, dz = this.z - fromZ;
+    const d = Math.hypot(dx, dz) || 1;
+    this.vx += (dx / d) * 6;
+    this.vz += (dz / d) * 6;
+
+    game.audio.playerHurt();
+    game.haptics.fire('heavy', 0);
+    game.cam.addShake(0.45);
+    game.fx.chips(this.x, 1.0, this.z, 6, 'rgba(230,90,80,1)', 1);
+    game.texts.spawn(`-${n}`, this.x, 1.7, this.z, { color: '#ff7a6b', size: 1, life: 0.8 });
+    game.bus.emit('player:hurt', this.hp);
+
+    if (this.hp <= 0) this._faint(game);
+  }
+
+  /** Svenimento: nessun game over, si perde metà del carico. */
+  _faint(game) {
+    this.hp = 0;
+    this.alive = false;
+    this.reviveT = 0;
+    const lost = Math.floor(game.carry.total / 2);
+    for (let i = 0; i < lost; i++) {
+      const t = game.carry.topType();
+      if (t) game.carry.removeOne(t);
+    }
+    game.audio.faint();
+    game.haptics.fire('heavy', 0);
+    game.cam.addShake(0.7);
+    game.fx.puff(this.x, 0.2, this.z, 14, 'rgba(220,220,230,0.9)', 1.2, 0.4);
+    game.bus.emit('player:faint', lost);
+  }
+
+  /** Ritorno al falò dopo lo svenimento. */
+  _revive(game) {
+    this.alive = true;
+    this.hp = this.maxHp;
+    this.invuln = 2.5;
+    this.sinceDamage = 0;
+    this.x = 0; this.z = 2;
+    this.vx = this.vz = 0;
+    game.grid.update(this);
+    game.cam.snapTo(this.x, this.z);
+    game.fx.sparks(this.x, 1, this.z, 20, 'rgba(160,255,190,1)', 1.1);
+    game.audio.revive();
+    game.bus.emit('player:revived');
   }
 
   /** Altezza della cima della pila (bersaglio dei tronchi attratti). */
@@ -59,6 +130,27 @@ export class Player extends Entity {
   update(dt, game) {
     const P = CFG.player;
     const input = game.input;
+
+    this.invuln = Math.max(0, this.invuln - dt);
+    this.sinceDamage += dt;
+    this.hurtFlash = damp(this.hurtFlash, 0, 5, dt);
+
+    // Svenuto: breve pausa e poi risveglio al falò.
+    if (!this.alive) {
+      this.vx = damp(this.vx, 0, 8, dt);
+      this.vz = damp(this.vz, 0, 8, dt);
+      this.x += this.vx * dt;
+      this.z += this.vz * dt;
+      this.reviveT += dt;
+      if (this.reviveT > 1.6) this._revive(game);
+      return;
+    }
+
+    // Rigenerazione: riparte solo dopo un po' che non prendi colpi.
+    if (this.hp < this.maxHp && this.sinceDamage > P.regenDelay) {
+      this.hp = Math.min(this.maxHp, this.hp + P.regenRate * dt);
+    }
+
     const maxSpeed = P.speed * (game.stats.speedMul ?? 1)
       // con lo zaino pieno si è leggermente più lenti: dà peso all'azione
       * (1 - 0.16 * game.carry.fillRatio);
@@ -66,7 +158,8 @@ export class Player extends Entity {
     /* --- movimento --- */
     const ix = input.x, iz = input.z;
     const mag = input.mag;
-    const canMove = this.anim !== 'chop' || mag > 0.05;
+    const acting = this.anim === 'chop' || this.anim === 'mine' || this.anim === 'attack';
+    const canMove = !acting || mag > 0.05;
 
     if (mag > 0.02 && canMove) {
       const tx = ix * maxSpeed, tz = iz * maxSpeed;
@@ -99,8 +192,8 @@ export class Player extends Entity {
     this.stackBump = damp(this.stackBump, 0, 9, dt);
     this.squash = damp(this.squash, 1, 12, dt);
 
-    /* --- taglio automatico --- */
-    this._updateChop(dt, game);
+    /* --- azioni automatiche: combattere, tagliare, scavare --- */
+    this._updateAction(dt, game);
 
     /* --- animazione --- */
     this._updateAnim(dt, game);
@@ -135,63 +228,102 @@ export class Player extends Entity {
     }
   }
 
-  /** Trova l'albero più vicino e lo taglia automaticamente. */
-  _updateChop(dt, game) {
-    // Si taglia quando si è fermi (o si sta spingendo contro il tronco).
+  /**
+   * Azioni automatiche, in ordine di priorità:
+   *   1. c'è un nemico a tiro?  → attacchi
+   *   2. c'è una risorsa vicina? → la raccogli (ascia o piccone)
+   *
+   * Non serve premere nulla: ci si avvicina e il personaggio fa la cosa
+   * giusta. È la regola d'oro di tutto il gioco.
+   */
+  _updateAction(dt, game) {
+    const range = CFG.player.actionRange;
+    const near = game.scratch.near;
+    game.grid.queryRadius(this.x, this.z, range + 1.6, near);
+
+    /* --- 1. combattimento --- */
+    let enemy = null, enemyD = Infinity;
+    for (let i = 0; i < near.length; i++) {
+      const e = near[i];
+      if (!(e instanceof WolfEntity) || !e.alive) continue;
+      const d = Math.hypot(e.x - this.x, e.z - this.z);
+      if (d <= CFG.player.attackRange + e.radius && d < enemyD) { enemyD = d; enemy = e; }
+    }
+    this.enemyTarget = enemy;
+
+    if (enemy) {
+      this.target = null;
+      this.yaw = angleTowards(this.yaw, Math.atan2(enemy.x - this.x, enemy.z - this.z), 11 * dt);
+      this.anim = 'attack';
+
+      this.attackTimer -= dt;
+      const interval = CFG.player.attackInterval;
+      const prev = this.chopT;
+      this.chopT = clamp(1 - this.attackTimer / interval, 0, 1);
+      if (prev < 0.6 && this.chopT >= 0.6) {
+        enemy.takeDamage(Math.round(game.stats.attackDamage), this.x, this.z, game);
+        game.audio.swing();
+        game.cam.addShake(0.16);
+      }
+      if (this.attackTimer <= 0) { this.attackTimer = interval; this.chopT = 0; }
+      return;
+    }
+    this.attackTimer = 0;
+
+    /* --- 2. raccolta risorse --- */
+    // Si raccoglie da fermi (o spingendo contro la risorsa, dato che è solida).
     const stationary = this.speed < 1.2;
-    let best = null, bestD = Infinity;
+    let best = null, bestScore = Infinity;
 
     if (stationary && !game.carry.isFull) {
-      const near = game.scratch.near;
-      const range = CFG.player.actionRange;
-      game.grid.queryRadius(this.x, this.z, range + 1.2, near);
       for (let i = 0; i < near.length; i++) {
         const e = near[i];
-        if (!(e instanceof TreeEntity)) continue;
-        if (!e.harvestable || e.state !== TREE_STATE.ALIVE) continue;
+        let ok = false;
+        if (e instanceof TreeEntity) {
+          ok = e.harvestable && e.state === TREE_STATE.ALIVE;
+        } else if (e instanceof RockEntity) {
+          // i massi richiedono il piccone: senza, si mostra solo un suggerimento
+          ok = e.harvestable && e.state === ROCK_STATE.SOLID && game.stats.hasPick;
+        }
+        if (!ok) continue;
+
         const dx = e.x - this.x, dz = e.z - this.z;
         const d = Math.hypot(dx, dz) - e.radius;
         if (d > range) continue;
-        // preferisci l'albero davanti a te
+        // a parità di distanza si preferisce ciò che si ha davanti
         const ang = Math.abs(angleDelta(this.yaw, Math.atan2(dx, dz)));
         const score = d + ang * 0.35;
-        if (score < bestD) { bestD = score; best = e; }
+        if (score < bestScore) { bestScore = score; best = e; }
       }
     }
 
     this.target = best;
 
     if (best) {
-      // guarda l'albero
-      const desired = Math.atan2(best.x - this.x, best.z - this.z);
-      this.yaw = angleTowards(this.yaw, desired, 9 * dt);
+      const isRock = best instanceof RockEntity;
+      this.yaw = angleTowards(this.yaw, Math.atan2(best.x - this.x, best.z - this.z), 9 * dt);
+      this.anim = isRock ? 'mine' : 'chop';
+
+      const speedMul = isRock ? (game.stats.mineSpeed ?? 1) : (game.stats.chopSpeed ?? 1);
+      const interval = CFG.harvest.chopInterval / speedMul;
 
       this.chopTimer -= dt;
-      if (this.anim !== 'chop') {
-        this.anim = 'chop';
-        this.chopT = 0;
-      }
-      if (this.chopTimer <= 0) {
-        this.chopTimer = CFG.harvest.chopInterval / (game.stats.chopSpeed ?? 1);
-        this.chopT = 0;
-      }
-      // il colpo va a segno a metà dell'animazione
-      const interval = CFG.harvest.chopInterval / (game.stats.chopSpeed ?? 1);
+      if (this.chopTimer <= 0) { this.chopTimer = interval; this.chopT = 0; }
+
       const prev = this.chopT;
       this.chopT = clamp(1 - this.chopTimer / interval, 0, 1);
       if (prev < 0.62 && this.chopT >= 0.62) {
-        best.hit(game.stats.axeDamage ?? 1, this.x, this.z, game);
+        const dmg = isRock ? game.stats.pickDamage : game.stats.axeDamage;
+        best.hit(dmg ?? 1, this.x, this.z, game);
       }
-    } else if (this.anim === 'chop') {
+    } else if (this.anim === 'chop' || this.anim === 'mine' || this.anim === 'attack') {
       this.anim = 'idle';
     }
   }
 
   _updateAnim(dt, game) {
-    if (this.target) {
-      this.anim = 'chop';
-      return;
-    }
+    // le azioni impostano già `anim` in _updateAction
+    if (this.target || this.enemyTarget) return;
     if (this.speed > 0.35) {
       this.anim = 'walk';
       // la fase avanza proporzionalmente alla velocità: niente "pattinaggio"
@@ -226,9 +358,12 @@ export class Player extends Entity {
     const di = this._dirIndex();
 
     let sp;
-    if (this.anim === 'chop') {
+    if (this.anim === 'chop' || this.anim === 'attack') {
       const f = clamp(Math.floor(this.chopT * CHAR.chopFrames), 0, CHAR.chopFrames - 1);
       sp = atlas.chop[di]?.[f];
+    } else if (this.anim === 'mine') {
+      const f = clamp(Math.floor(this.chopT * CHAR.chopFrames), 0, CHAR.chopFrames - 1);
+      sp = atlas.mine?.[di]?.[f] ?? atlas.chop[di]?.[f];
     } else if (this.anim === 'walk') {
       const f = Math.floor(this.animT * CHAR.walkFrames) % CHAR.walkFrames;
       sp = atlas.walk[di]?.[f];
@@ -245,9 +380,15 @@ export class Player extends Entity {
     const breath = this.anim === 'idle'
       ? Math.sin(game.time * 2.4) * 0.012 : 0;
 
+    // Dopo un colpo il personaggio lampeggia: comunica l'invulnerabilità
+    // temporanea senza bisogno di icone.
+    const blink = Math.sin(game.time * 34) > 0 ? 0.45 : 1;
+
     r.sprite(sp, this.x, breath, this.z, {
       depth,
-      squash: this.squash,
+      alpha: this.invuln > 0 ? blink : 1,
+      squash: this.squash * (1 - this.hurtFlash * 0.08),
+      rot: this.alive ? 0 : clamp(this.reviveT * 1.1, 0, 1.3),
     });
 
     this._drawStack(r, game, depth);
@@ -274,7 +415,10 @@ export class Player extends Entity {
     const backDist = -C.stackOrigin.z;
 
     const di = this._dirIndex();
-    const logSprite = A.carriedLogs ? A.carriedLogs[di] : A.carriedLog;
+    const byType = {
+      wood: A.carriedLogs ? A.carriedLogs[di] : A.carriedLog,
+      stone: A.carriedStones ? A.carriedStones[di] : A.carriedLog,
+    };
 
     const n = stack.length;
     for (let i = 0; i < n; i++) {
@@ -292,7 +436,8 @@ export class Player extends Entity {
       const ox = bx * backDist + this.swayX * lean + s.jx + sx * (i % 2 ? 0.035 : -0.035);
       const oz = bz * backDist + this.swayZ * lean + s.jz + sz * (i % 2 ? 0.035 : -0.035);
 
-      r.sprite(logSprite, this.x + ox, C.stackOrigin.y + h + appOff + bump, this.z + oz, {
+      const sp = byType[s.type] ?? byType.wood;
+      r.sprite(sp, this.x + ox, C.stackOrigin.y + h + appOff + bump, this.z + oz, {
         // ogni tronco è leggermente più avanti nella pila per un ordine stabile
         depth: baseDepth + (bz < 0 ? -0.02 : 0.02) + i * 0.0006,
         rot: s.jr * 0.35,

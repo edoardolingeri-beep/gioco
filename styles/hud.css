@@ -99,7 +99,7 @@
 
 .toast-wrap {
   position: absolute;
-  top: calc(var(--safe-top) + 76px);
+  top: calc(var(--safe-top) + 92px);
   left: 0; right: 0;
   display: flex;
   flex-direction: column;
@@ -222,3 +222,44 @@
 }
 .btn:active { transform: scale(.97); }
 .btn.danger { background: rgba(255,122,107,.2); color: var(--danger); }
+
+/* ------------------------------------------------ salute e villaggio (Fase 2) */
+
+.chip-village b { font-size: 16px; font-weight: 900; }
+.chip-village[hidden] { display: none; }
+
+/* La barra della salute resta nascosta finché sei al massimo: l'interfaccia
+   deve raccontare solo ciò che è rilevante adesso. */
+.health {
+  position: absolute;
+  top: calc(var(--safe-top) + 70px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(230px, 62vw);
+  height: 12px;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, .45);
+  border: 1.5px solid rgba(255, 255, 255, .18);
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+  animation: fade .2s ease;
+}
+.health[hidden] { display: none; }
+
+.health > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #ff6b5b, #ffa06b);
+  transform-origin: left center;
+  transition: transform .16s ease-out;
+}
+
+.health.low { animation: healthPulse .8s ease-in-out infinite; }
+@keyframes healthPulse {
+  0%, 100% { box-shadow: 0 4px 14px rgba(0, 0, 0, .35); }
+  50%      { box-shadow: 0 4px 20px rgba(255, 90, 80, .7); }
+}
+
+/* La griglia delle statistiche ora ha più voci */
+.stat-row { grid-template-columns: repeat(4, 1fr); }

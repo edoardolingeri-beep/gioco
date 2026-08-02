@@ -13,7 +13,9 @@
     "apk": "node build.mjs && npx cap sync android && cd android && ./gradlew assembleDebug",
     "test": "node tools/smoke-test.cjs",
     "shots": "node tools/screenshots.cjs",
-    "perf": "node tools/perf.cjs"
+    "perf": "node tools/perf.cjs",
+    "test:phase2": "node tools/phase2-test.cjs",
+    "shots:phase2": "node tools/phase2-shots.cjs"
   },
   "license": "MIT",
   "devDependencies": {
