@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <title>Villaggio</title>
+  <!-- viewport-fit=cover + niente zoom: comportamento da app, non da pagina web -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#2a2438">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="color-scheme" content="dark">
+  <!-- Favicon inline: evita una richiesta di rete inutile dentro la WebView -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🌳</text></svg>">
+  <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="styles/hud.css">
+</head>
+<body>
+  <!-- Il mondo di gioco -->
+  <canvas id="game"></canvas>
+
+  <!-- Joystick virtuale (DOM: composto in GPU) -->
+  <div id="joystick-layer"></div>
+
+  <!-- Interfaccia -->
+  <div id="hud"></div>
+
+  <!-- Schermata di caricamento: la "cottura" delle sprite è reale -->
+  <div id="loader">
+    <div class="loader-inner">
+      <div class="loader-logo">🌳</div>
+      <h1>Villaggio</h1>
+      <div class="loader-bar"><i id="loader-bar"></i></div>
+      <p id="loader-tip">Preparazione del mondo…</p>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
