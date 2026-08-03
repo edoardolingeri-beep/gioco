@@ -455,6 +455,11 @@ l'avesse raccolta a mano. Un nastro trasportatore, in una fase successiva
 del gioco, è il candidato naturale per automatizzare anche quest'ultimo
 tratto: la struttura è già pronta, semplicemente non esiste ancora.
 
+Il cartello compare vicino all'edificio che lo sblocca (`offX`/`offZ` in
+`data/workers.js`), spostato verso il centro del villaggio e non verso il
+bosco o la cava: appena il recinto compare, il magazzino da ritirare resta
+dentro le mura invece di trovarsi appena fuori da un cancello.
+
 ### Un recinto quadrato, non un cerchio
 
 La prima versione era un anello di 44 tratti, ognuno orientato con la sprite
@@ -486,6 +491,18 @@ farceli davvero entrare, `NPCEntity._go()` riconosce quando è fuori dal
 recinto con una meta al suo interno e punta prima al centro del varco più
 vicino (`VillageSystem.gateCenters`), passando alla meta reale solo una
 volta dentro.
+
+L'arco del cancello, però, era cotto in un solo orientamento e riusato su
+tutti e quattro i lati: su quelli verticali (est/ovest) restava disegnato
+per traverso sopra una staccionata quasi di taglio, un incrocio senza
+senso. Ora `AssetForge` cuoce anche l'arco in due orientamenti, come la
+staccionata stessa, e `_buildFenceRing` sceglie quello giusto per lato. La
+staccionata "di taglio" aveva un problema simile ma più sottile: vista
+quasi di profilo dalla telecamera fissa, le traverse sottili sparivano
+quasi del tutto, lasciando solo i cappelli a punta dei pali — una fila di
+rombi staccati, non un recinto. Il modello (`buildFence` in
+`models/village.js`) ha ora traverse e pali intermedi più spessi apposta:
+restano leggeri visti di fronte, non svaniscono più visti di taglio.
 
 ---
 
