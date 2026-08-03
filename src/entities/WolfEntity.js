@@ -243,6 +243,7 @@ export class WolfEntity extends Entity {
       this.x += (dx / d) * (rr - d);
       this.z += (dz / d) * (rr - d);
     }
+    game.world.blockRiver(this);
     const R = CFG.world.radius;
     const dl = Math.hypot(this.x, this.z);
     if (dl > R) { this.x = (this.x / dl) * R; this.z = (this.z / dl) * R; }

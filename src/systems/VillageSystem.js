@@ -90,6 +90,52 @@ const STAGES = [
       { sprite: 'brazier', x: -5.4, z: 4.6, shadow: 0.42, solid: true, radius: 0.36 },
     ],
   },
+
+  /* ------------------------------ Fase 3: da borgo a paese ------------ */
+
+  /* liv. 6 — il ponte: il paese si apre verso nord */
+  {
+    name: 'Crocevia',
+    npcs: 3,
+    props: () => [
+      { sprite: 'trough', x: 2.2, z: 0.4, shadow: 0.8, solid: true, radius: 0.75,
+        poi: { kind: 'work', stopDist: 1.2 } },
+      { sprite: 'wagon', x: -3.2, z: -5.2, shadow: 0.85, solid: true, radius: 0.9,
+        poi: { kind: 'work', stopDist: 1.4 } },
+    ],
+  },
+
+  /* liv. 7 — il mulino: arrivano le STRADE LASTRICATE */
+  {
+    name: 'Paese',
+    npcs: 4,
+    cobbleRoads: true,
+    haulers: 2,
+    props: () => [
+      { sprite: 'lamp', x: 3.6, z: 2.2, shadow: 0.28, solid: true, radius: 0.25 },
+      { sprite: 'lamp', x: -3.8, z: -1.2, shadow: 0.28, solid: true, radius: 0.25 },
+      { sprite: 'wagon', x: 5.4, z: -3.6, shadow: 0.85, solid: true, radius: 0.9,
+        poi: { kind: 'work', stopDist: 1.4 } },
+      { sprite: 'bench', x: -1.2, z: -6.4, shadow: 0.5, solid: true, radius: 0.5,
+        poi: { kind: 'sit', stopDist: 0.85, yaw: 0 } },
+    ],
+  },
+
+  /* liv. 8 — la fucina: il paese è completo (fine Fase 3) */
+  {
+    name: 'Paese fiorente',
+    npcs: 5,
+    haulers: 2,
+    props: () => [
+      { sprite: 'lamp', x: 6.4, z: 4.2, shadow: 0.28, solid: true, radius: 0.25 },
+      { sprite: 'lamp', x: -6.6, z: 1.6, shadow: 0.28, solid: true, radius: 0.25 },
+      { sprite: 'lamp', x: 0.4, z: 6.6, shadow: 0.28, solid: true, radius: 0.25 },
+      { sprite: 'trough', x: -7.2, z: -4.4, shadow: 0.8, solid: true, radius: 0.75,
+        poi: { kind: 'work', stopDist: 1.2 } },
+      { sprite: 'garden', x: 7.0, z: -1.4, shadow: 0.9,
+        poi: { kind: 'work', stopDist: 1.3 } },
+    ],
+  },
 ];
 
 export class VillageSystem {
@@ -139,13 +185,24 @@ export class VillageSystem {
     });
 
     if (stage.fenceRing) this._buildFenceRing(instant);
+    if (stage.cobbleRoads) this._paveRoads();
 
     for (let i = 0; i < (stage.npcs ?? 0); i++) {
       this.spawnNPC(instant ? 0 : 0.6 + i * 0.5);
     }
+    // I carrettieri fanno la spola fra gli edifici: sono la parte del paese
+    // che si "muove" anche quando il giocatore sta fermo.
+    for (let i = 0; i < (stage.haulers ?? 0); i++) {
+      const npc = this.spawnNPC(instant ? 0 : 1.2 + i * 0.7);
+      if (npc) npc.hauling = true;
+    }
 
-    // il sentiero centrale si allarga a ogni livello
-    g.world.terrain.addDecal(0, 0, 4.6 + this.level * 0.9, PAL.dirt, 0.12);
+    // La piazza si allarga di poco a ogni livello. Il raggio è volutamente
+    // contenuto: una decalcomania molto grande costa, da sola, più di tutto
+    // il resto del frame (è il costo di riempire lo schermo in alpha).
+    if (this.level <= 4) {
+      g.world.terrain.addDecal(0, 0, 3.0 + this.level * 0.35, PAL.dirt, 0.1);
+    }
 
     if (!instant) {
       g.hud.toast(`Il villaggio cresce: ${stage.name}! 🎉`);
@@ -195,6 +252,36 @@ export class VillageSystem {
         delay: instant ? 0 : 1.2, instant, silent: instant,
       }), !instant);
     }
+  }
+
+  /**
+   * Lastrica in pietra i sentieri principali del paese.
+   *
+   * Non sostituiamo il terreno: sovrapponiamo una decalcomania più chiara e
+   * netta a quella di terra battuta. Il risultato è che le strade "diventano"
+   * di pietra sotto gli occhi del giocatore, senza rigenerare nulla.
+   */
+  _paveRoads() {
+    const g = this.game;
+    const t = g.world.terrain;
+    const hubs = [
+      { x: 0, z: 0 },
+      g.world.hutSpot,
+      g.world.merchantSpot,
+      g.world.benchSpot,
+      { x: g.world.buildings.sawmill.x, z: g.world.buildings.sawmill.z },
+      { x: g.world.buildings.quarry.x, z: g.world.buildings.quarry.z },
+      { x: g.world.buildings.house.x, z: g.world.buildings.house.z },
+      { x: g.world.buildings.warehouse.x, z: g.world.buildings.warehouse.z },
+      { x: g.world.buildings.bridge.x, z: g.world.buildings.bridge.z + 3.2 },
+    ];
+    for (let i = 1; i < hubs.length; i++) {
+      t.addPath(hubs[0].x, hubs[0].z, hubs[i].x, hubs[i].z, 1.1, 1.4, PAL.cobble, 0.9, 'cobble');
+    }
+    // piazza centrale lastricata
+    t.addDecal(0, 0, 3.6, PAL.cobble, 0.9, 'cobble');
+
+    g.hud.toast('Le strade sono state lastricate 🧱');
   }
 
   /** Aggiunge un abitante che entra nel villaggio dal bosco. */

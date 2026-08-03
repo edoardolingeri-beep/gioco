@@ -34,6 +34,7 @@ import { BUILD_STATE } from '../entities/BuildingEntity.js';
 import { BUILD_ORDER, BUILDINGS } from '../data/buildings.js';
 
 const SAVE_KEY = 'gioco.save.v1';
+const SAVE_VERSIONS = [1, 2, 3];
 
 export class Game {
   /**
@@ -72,9 +73,10 @@ export class Game {
       chopSpeed: 1, mineSpeed: 1,
       attackDamage: CFG.player.baseDamage,
       // bonus concessi dagli edifici
-      logBonus: 0, stoneBonus: 0, warehouseBonus: 0,
+      logBonus: 0, stoneBonus: 0, ironBonus: 0, warehouseBonus: 0,
+      sellBonus: 1,
       // contatori
-      treesChopped: 0, rocksMined: 0, wolvesKilled: 0, upgradeIndex: 0,
+      treesChopped: 0, rocksMined: 0, ironMined: 0, wolvesKilled: 0, upgradeIndex: 0,
     };
 
     this.time = 0;
@@ -259,18 +261,21 @@ export class Game {
     this.bus.emit('tree:felled', tree);
   }
 
-  /** Genera i blocchi quando un masso viene frantumato. */
-  spawnStones(rock) {
-    const n = CFG.harvest.stonePerRock + this.stats.stoneBonus;
+  /** Genera il minerale quando un masso o una vena vengono frantumati. */
+  spawnOre(rock) {
+    const type = rock.resource;
+    const base = type === 'iron' ? CFG.harvest.ironPerVein : CFG.harvest.stonePerRock;
+    const n = base + (type === 'stone' ? this.stats.stoneBonus : this.stats.ironBonus);
     for (let i = 0; i < n; i++) {
       const p = this.pickups.spawn(
-        'stone',
+        type,
         rock.x + fxRand.sym(0.3), 0.5, rock.z + fxRand.sym(0.3),
         fxRand.sym(0.5), fxRand.sym(0.5), 0.8,
       );
       p.age = -i * 0.05;
     }
-    this.stats.rocksMined++;
+    if (type === 'iron') this.stats.ironMined++;
+    else this.stats.rocksMined++;
     this.bus.emit('rock:mined', rock);
   }
 
@@ -311,8 +316,9 @@ export class Game {
 
     r.begin(cam);
 
-    // 1. terreno
+    // 1. terreno e fiume (entrambi "sotto" a tutto)
     this.world.terrain.draw(ctx, cam, { w: r.w, h: r.h });
+    this.world.river.draw(ctx, cam, { w: r.w, h: r.h });
 
     // 2. entità (ordinate per profondità) + risorse in volo
     this.world.draw(r, this, cam);
@@ -380,7 +386,7 @@ export class Game {
         };
       }
       const data = {
-        v: 2,
+        v: 3,
         coins: this.stats.coins,
         axeLevel: this.stats.axeLevel,
         pickLevel: this.stats.pickLevel,
@@ -390,10 +396,13 @@ export class Game {
         armorLevel: this.stats.armorLevel,
         logBonus: this.stats.logBonus,
         stoneBonus: this.stats.stoneBonus,
+        ironBonus: this.stats.ironBonus,
+        sellBonus: this.stats.sellBonus,
         warehouseBonus: this.stats.warehouseBonus,
         upgradeIndex: w.workbench.index,
         treesChopped: this.stats.treesChopped,
         rocksMined: this.stats.rocksMined,
+        ironMined: this.stats.ironMined,
         wolvesKilled: this.stats.wolvesKilled,
         villageLevel: this.village.level,
         buildings,
@@ -409,7 +418,7 @@ export class Game {
     try { data = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch { data = null; }
     // I salvataggi della Fase 1 restano validi: i campi nuovi prendono il
     // valore predefinito e la partita riprende senza perdere nulla.
-    if (!data || (data.v !== 1 && data.v !== 2)) { this.recomputeStats(); return; }
+    if (!data || !SAVE_VERSIONS.includes(data.v)) { this.recomputeStats(); return; }
 
     const s = this.stats;
     s.coins = data.coins ?? 0;
@@ -421,9 +430,12 @@ export class Game {
     s.armorLevel = data.armorLevel ?? 1;
     s.logBonus = data.logBonus ?? 0;
     s.stoneBonus = data.stoneBonus ?? 0;
+    s.ironBonus = data.ironBonus ?? 0;
+    s.sellBonus = data.sellBonus ?? 1;
     s.warehouseBonus = data.warehouseBonus ?? 0;
     s.treesChopped = data.treesChopped ?? 0;
     s.rocksMined = data.rocksMined ?? 0;
+    s.ironMined = data.ironMined ?? 0;
     s.wolvesKilled = data.wolvesKilled ?? 0;
     this.recomputeStats();
 
@@ -434,6 +446,7 @@ export class Game {
     const saved = data.buildings ?? (data.hut ? { hut: data.hut } : {});
     for (const id of BUILD_ORDER) {
       const b = w.buildings[id];
+      const def = BUILDINGS[id];
       const sv = saved[id];
       if (!b || !sv) continue;
       Object.assign(b.paid, sv.paid ?? {});
@@ -441,7 +454,10 @@ export class Game {
       if (sv.unlocked != null) b.unlocked = sv.unlocked;
       if (sv.state === BUILD_STATE.DONE || (b.unlocked && b.complete)) {
         b.state = BUILD_STATE.DONE;
-        b.solid = true;
+        b.solid = def.solidWhenDone !== false;
+        // Alcuni edifici modificano il mondo (il ponte apre il fiume):
+        // l'effetto va riapplicato al caricamento, senza fanfare.
+        def.onRestore?.(this, b);
       }
     }
 

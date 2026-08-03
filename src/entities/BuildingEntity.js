@@ -47,6 +47,8 @@ export class BuildingEntity extends Entity {
     this.riseT = 0;
     this.pulse = 0;           // lampeggio quando riceve materiale
     this.ghostPhase = 0;
+    /** Fase di animazione per le parti mobili (pale del mulino). */
+    this.spin = 0;
   }
 
   /** Punto d'arrivo delle risorse in volo. */
@@ -75,6 +77,13 @@ export class BuildingEntity extends Entity {
   update(dt, game) {
     if (!this.available) return;
     this.ghostPhase += dt;
+    if (this.state === BUILD_STATE.DONE) {
+      // Un edificio finito e senza parti mobili non ha più nulla da
+      // aggiornare: esce dalla lista degli update.
+      if (!this.def.overlay) { game.world.retire(this); this.static = true; return; }
+      this.spin += dt;
+      return;
+    }
     this.pulse = damp(this.pulse, 0, 7, dt);
 
     const p = game.player;
@@ -192,7 +201,9 @@ export class BuildingEntity extends Entity {
 
   _finish(game) {
     this.state = BUILD_STATE.DONE;
-    this.solid = true;
+    // Alcune costruzioni si attraversano (il ponte!), quindi non diventano
+    // ostacoli.
+    this.solid = this.def.solidWhenDone !== false;
     this.radius = this.def.radius;
     game.cam.addShake(0.55);
     game.haptics.fire('success', 0);
@@ -250,6 +261,8 @@ export class BuildingEntity extends Entity {
 
     r.shadow(this.x, this.z, this.radius, 1);
     r.sprite(sp, this.x, 0, this.z, { depth: this.depth });
+    // Parti animate dell'edificio (le pale del mulino, la brace della fucina).
+    this.def.overlay?.(r, game, this);
   }
 
   /** Interfaccia (pannello) disegnata dopo il mondo. */

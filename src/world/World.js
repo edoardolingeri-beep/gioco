@@ -13,6 +13,7 @@ import { CFG } from '../data/config.js';
 import { Rand } from '../core/Rand.js';
 import { SpatialGrid } from '../core/SpatialGrid.js';
 import { Terrain } from './Terrain.js';
+import { River } from './River.js';
 import { StaticProp } from '../entities/Entity.js';
 import { TreeEntity } from '../entities/TreeEntity.js';
 import { BuildingEntity } from '../entities/BuildingEntity.js';
@@ -33,6 +34,7 @@ export class World {
     this.visible = [];
     this.rnd = new Rand(CFG.world.seed);
     this.terrain = null;
+    this.river = new River();
   }
 
   add(e, dynamic = false) {
@@ -70,8 +72,8 @@ export class World {
     this.terrain = new Terrain(ppu, W.seed);
 
     /* --- la radura iniziale e i sentieri --- */
-    this.terrain.addDecal(0, 0, 4.6, PAL.dirt, 0.3);
-    this.terrain.addDecal(0.6, 1.2, 2.8, PAL.dirtDark, 0.16);
+    this.terrain.addDecal(0, 0, 3.8, PAL.dirt, 0.3);
+    this.terrain.addDecal(0.6, 1.2, 2.4, PAL.dirtDark, 0.16);
 
     // punti chiave del villaggio di partenza
     this.hutSpot = { x: -6.4, z: 3.2 };
@@ -138,6 +140,32 @@ export class World {
       rocks++;
     }
 
+    /* --- vene di ferro: SOLO sulla sponda nord del fiume (Fase 3) ---
+       È la ricompensa per aver costruito il ponte, quindi devono trovarsi
+       tutte al di là dell'acqua. */
+    let irons = 0, ironGuard = 0;
+    while (irons < W.ironCount && ironGuard++ < W.ironCount * 60) {
+      const a = rnd.range(0, Math.PI * 2);
+      const rr = Math.sqrt(rnd.next()) * W.radius;
+      const x = Math.cos(a) * rr, z = Math.sin(a) * rr;
+      // deve essere oltre il fiume, con un margine dalla riva
+      if (!this.river.isBeyond(x, z - 2)) continue;
+      if (this._blocked(x, z, 1.5)) continue;
+      this.add(new RockEntity(
+        x, z, rnd.pick(assets.ironVeins), rnd.pick(assets.rubble),
+        rnd.range(0.9, 1.15),
+        {
+          resource: 'iron',
+          hits: CFG.harvest.ironHits,
+          regrow: CFG.harvest.ironRegrowDelay,
+          requiredPick: 2,
+          hint: 'Serve il piccone d\'acciaio 🔨',
+          chipColor: 'rgb(206,138,86)',
+        },
+      ));
+      irons++;
+    }
+
     /* --- dettagli del terreno (nessuna collisione, nessun update) ---
        Le chiazze contengono già ciuffi, fiori e sassolini insieme: una sola
        sprite per una manciata di dettagli. */
@@ -169,7 +197,9 @@ export class World {
     this.buildings = {};
     for (const id of BUILD_ORDER) {
       const def = BUILDINGS[id];
-      const b = new BuildingEntity(def.spot.x, def.spot.z, def, this.game);
+      // Il ponte si aggancia al corso del fiume, che serpeggia.
+      const z = def.onRiver ? this.river.centerAt(def.spot.x) : def.spot.z;
+      const b = new BuildingEntity(def.spot.x, z, def, this.game);
       this.buildings[id] = this.add(b, true);
     }
     this.hut = this.buildings.hut;
@@ -200,6 +230,9 @@ export class World {
 
   /** True se qualcosa di ingombrante occupa già quel punto. */
   _blocked(x, z, r) {
+    // il fiume e le sue rive non ospitano nulla
+    const c = this.river.centerAt(x);
+    if (Math.abs(z - c) < this.river.halfWidth + 1.2 + r) return true;
     const out = this._scratch || (this._scratch = []);
     this.grid.queryRadius(x, z, r + 1.2, out);
     for (let i = 0; i < out.length; i++) {
@@ -228,9 +261,16 @@ export class World {
   /* ------------------------------------------------------------ runtime */
 
   update(dt, game) {
+    this.river.update(dt);
     const list = this.dynamic;
     for (let i = 0; i < list.length; i++) list[i].update(dt, game);
   }
+
+  /**
+   * Respinge un'entità fuori dall'acqua. Il ponte apre un varco, quindi
+   * dopo averlo costruito si passa normalmente.
+   */
+  blockRiver(e) { return this.river.push(e); }
 
   /** Accoda al renderer tutte le entità inquadrate, ordinate per profondità. */
   draw(r, game, cam) {

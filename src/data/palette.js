@@ -88,6 +88,20 @@ export const PAL = {
   waterA:     [ 92, 168, 216],
   waterB:     [ 66, 138, 190],
 
+  /* Fase 3: paese */
+  ironOre:    [206, 138,  86],
+  ironOreD:   [168,  98,  62],
+  ironBar:    [178, 186, 202],
+  cobble:     [156, 152, 148],
+  cobbleD:    [128, 124, 122],
+  cobbleL:    [182, 178, 172],
+  millSail:   [232, 226, 208],
+  millWood:   [156, 112,  74],
+  forge:      [ 74,  70,  78],
+  forgeHot:   [255, 138,  56],
+  bridgeWood: [172, 126,  82],
+  bridgeDark: [136,  96,  62],
+
   /* varie */
   coin:       [255, 206,  84],
   coinDark:   [230, 168,  50],

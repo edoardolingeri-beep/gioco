@@ -9,7 +9,7 @@ libreria di gioco) e impacchettato come **app nativa** con Capacitor.
 
 ---
 
-## Stato: Fasi 1 e 2 complete ✅
+## Stato: Fasi 1, 2 e 3 complete ✅
 
 La prima fase è quella che il resto del gioco userà come fondamenta, quindi è
 stata rifinita fino in fondo prima di proseguire:
@@ -46,8 +46,22 @@ stata rifinita fino in fondo prima di proseguire:
 | Combattimento automatico, salute, svenimento senza game over | ✅ |
 | 8 potenziamenti, tutti visibili sul modello del personaggio | ✅ |
 
-Le fasi successive (paese → città → metropoli, nuovi biomi) sono descritte in
-fondo: l'architettura è già predisposta.
+### Fase 3 — Il paese
+
+| Funzionalità | Stato |
+|---|---|
+| **Fiume** che serpeggia e taglia la mappa: invalicabile | ✅ |
+| **Ponte** da costruire: apre la sponda nord | ✅ |
+| **Ferro**, solo oltre il fiume, col piccone d'acciaio | ✅ |
+| **Mulino** con le pale che girano davvero | ✅ |
+| **Fucina** con la forgia accesa e le scintille | ✅ |
+| **Strade lastricate** che sostituiscono i sentieri di terra | ✅ |
+| Carri trainati dagli abitanti attraverso il paese | ✅ |
+| Lampioni, abbeveratoi, nuovi arredi urbani | ✅ |
+| 11 potenziamenti, 8 costruzioni, 8 livelli di crescita | ✅ |
+
+Le fasi successive (città → metropoli, nuovi biomi) sono descritte in fondo:
+l'architettura è già predisposta.
 
 ---
 
@@ -60,6 +74,9 @@ Non ci sono menù: **tutto succede nel mondo**.
 - **Tagliare** — avvicinati a un albero e fermati: il personaggio inizia da solo.
 - **Scavare** — stessa cosa con i massi di pietra, ma serve il **piccone**
   (si compra al banco dell'artigiano). Senza, un fumetto te lo ricorda.
+  Il **ferro** sta oltre il fiume e vuole il piccone d'acciaio.
+- **Attraversare** — il fiume ti blocca finché non costruisci il ponte.
+  È il confine che rende la sponda nord una conquista.
 - **Combattere** — quando un lupo ti arriva addosso attacchi da solo. Se cadi
   non è un game over: ti risvegli al falò avendo perso metà del carico.
 - **Raccogliere** — i tronchi si impilano automaticamente sulla schiena.
@@ -165,11 +182,13 @@ src/
     nature.js              alberi, cespugli, chiazze di prato, massi, risorse
     buildings.js           capanna, bancarella, banco dell'artigiano…
     village.js             segheria, cava, casa, magazzino e arredi
+    town.js                ponte, mulino, fucina, vene di ferro, carri
     enemies.js             rig animato del lupo
 
   world/
     World.js               generazione della mappa e gestione delle entità
-    Terrain.js             terreno a pattern + decalcomanie (radure, sentieri)
+    Terrain.js             terreno a pattern + decalcomanie in layer cache
+    River.js               il fiume: corso, collisione, guadi e riflessi
 
   entities/                oggetti del mondo, tutti con update/draw
     Entity.js  Player.js
@@ -206,6 +225,7 @@ src/
 tools/                     strumenti di sviluppo (Playwright)
     smoke-test.cjs         verifica end-to-end del ciclo di Fase 1
     phase2-test.cjs        verifica di pietra, cantieri, villaggio, lupi
+    phase3-test.cjs        verifica di fiume, ponte, ferro, mulino, strade
     screenshots.cjs        cattura i momenti chiave
     phase2-shots.cjs       porta la partita a villaggio completo
     perf.cjs               profila il costo del frame
@@ -244,6 +264,11 @@ Altre scelte pensate per il telefono:
 - **griglia spaziale** per disegnare solo ciò che è inquadrato;
 - **chiazze di prato**: ciuffi, fiori e sassolini sono pre-composti in un'unica
   sprite, riducendo di 5-8 volte il numero di disegni per frame;
+- **layer delle decalcomanie in cache**: col paese cresciuto sentieri e strade
+  diventano un centinaio e si accavallano sulla piazza; disegnarli ogni frame
+  significava riempire lo schermo quattro volte in alpha — di gran lunga la
+  voce più cara del frame. Ora finiscono in un unico layer, rigenerato solo
+  quando la camera esce dal margine;
 - **qualità adattiva**: se gli FPS calano, la risoluzione di rendering scende
   senza cambiare l'aspetto del gioco;
 - **audio sintetizzato** con WebAudio: zero file da caricare, e ogni colpo
@@ -258,7 +283,6 @@ Altre scelte pensate per il telefono:
 L'architettura è già pronta per crescere: ogni fase aggiunge moduli senza
 riscrivere quelli esistenti.
 
-- **Fase 3 — Paese**: strade in pietra, mulino, fabbro, ponte, carri, ferro.
 - **Fase 4 — Città**: asfalto, negozi, lampioni, parco, fontane, folla di NPC.
 - **Fase 5 — Metropoli**: grattacieli, auto, semafori, tram.
 - **Trasversali**: nuovi biomi ai bordi della mappa (montagne, deserto,

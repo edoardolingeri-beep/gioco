@@ -80,6 +80,7 @@ export class DeliverySystem {
       const f = list[i];
       const sp = f.kind === 'coin' ? assets.coin
         : f.kind === 'stone' ? assets.stoneDrop
+        : f.kind === 'iron' ? assets.ironDrop
         : assets.logDrop;
       r.sprite(sp, f.x, f.y, f.z, {
         rot: f.rot * 0.4,

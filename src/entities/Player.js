@@ -219,6 +219,9 @@ export class Player extends Entity {
       const vn = this.vx * nx + this.vz * nz;
       if (vn < 0) { this.vx -= nx * vn; this.vz -= nz * vn; }
     }
+    // il fiume è invalicabile finché non c'è il ponte
+    if (game.world.blockRiver(this)) { this.vz *= 0.2; }
+
     // limiti della mappa
     const R = CFG.world.radius;
     const dl = Math.hypot(this.x, this.z);
@@ -282,8 +285,9 @@ export class Player extends Entity {
         if (e instanceof TreeEntity) {
           ok = e.harvestable && e.state === TREE_STATE.ALIVE;
         } else if (e instanceof RockEntity) {
-          // i massi richiedono il piccone: senza, si mostra solo un suggerimento
-          ok = e.harvestable && e.state === ROCK_STATE.SOLID && game.stats.hasPick;
+          // massi e vene richiedono il piccone giusto: senza, resta solo il
+          // suggerimento sopra la roccia
+          ok = e.harvestable && e.state === ROCK_STATE.SOLID && e.canMine(game.stats);
         }
         if (!ok) continue;
 
@@ -418,6 +422,7 @@ export class Player extends Entity {
     const byType = {
       wood: A.carriedLogs ? A.carriedLogs[di] : A.carriedLog,
       stone: A.carriedStones ? A.carriedStones[di] : A.carriedLog,
+      iron: A.carriedIrons ? A.carriedIrons[di] : A.carriedLog,
     };
 
     const n = stack.length;

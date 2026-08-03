@@ -15,6 +15,7 @@ import { PAL } from '../data/palette.js';
 import * as Nature from '../models/nature.js';
 import * as Build from '../models/buildings.js';
 import * as Village from '../models/village.js';
+import * as Town from '../models/town.js';
 import { buildCharacter, buildCarriedLog, CHAR, TOOL } from '../models/character.js';
 import { buildWolf, buildAlertMark, ENEMY } from '../models/enemies.js';
 import { rotY as rotateMeshY } from './Mesh.js';
@@ -53,7 +54,11 @@ const VARIANTS = {
   patch: 16,   // chiazze di prato pre-composte (vedi buildGrassPatch)
   oreRock: 6,  // massi raccoglibili
   rubble: 3,
+  ironVein: 5, // vene di ferro (Fase 3)
 };
+
+/** Angoli pre-cotti delle pale del mulino: bastano per un moto fluido. */
+const MILL_ANGLES = 16;
 
 /**
  * Applica una tinta uniforme a una sprite già cotta (per i "fantasmi"
@@ -77,7 +82,7 @@ export class AssetForge {
     this.assets = {
       trees: [], stumps: [], saplings: [], bushes: [],
       tufts: [], flowers: [], pebbles: [], rocks: [], patches: [],
-      oreRocks: [], rubble: [],
+      oreRocks: [], rubble: [], ironVeins: [],
       char: null, wolf: null, npc: [],
       buildings: {}, village: {}, fx: {},
     };
@@ -167,17 +172,29 @@ export class AssetForge {
 
     /* ------------------------------------------------------------ risorse */
     this._job(() => {
+      for (let i = 0; i < VARIANTS.ironVein; i++) {
+        A.ironVeins.push(this._bakeProp(Town.buildIronVein(rnd), 1.8));
+      }
+    });
+
+    this._job(() => {
       A.logDrop = this._bakeProp(Nature.buildLogDrop(), 1.5);
       A.stoneDrop = this._bakeProp(Nature.buildStoneDrop(), 1.5);
+      A.ironDrop = this._bakeProp(Town.buildIronDrop(), 1.5);
       A.coin = this._bakeProp(Nature.buildCoin(), 1.5);
       A.alertMark = this._bakeProp(buildAlertMark(), 1.5);
     });
     this._job(() => {
       A.carriedStones = [];
+      A.carriedIrons = [];
       for (let d = 0; d < CHAR.dirs; d++) {
-        const m = Nature.buildCarriedStone();
-        rotateMeshY(m, (d / CHAR.dirs) * Math.PI * 2);
-        A.carriedStones.push(bakeMesh(m, { outline: 1.4 }));
+        const a = (d / CHAR.dirs) * Math.PI * 2;
+        const st = Nature.buildCarriedStone();
+        rotateMeshY(st, a);
+        A.carriedStones.push(bakeMesh(st, { outline: 1.4 }));
+        const ir = Town.buildCarriedIron();
+        rotateMeshY(ir, a);
+        A.carriedIrons.push(bakeMesh(ir, { outline: 1.4 }));
       }
     });
 
@@ -224,6 +241,37 @@ export class AssetForge {
         A.buildings[id + 'Ghost'] = tintSprite(A.buildings[id], '#8ad4ff', 0.82, 0.9);
       });
     }
+
+    /* ------------------------------------------------- edifici di Fase 3 */
+    this._job(() => {
+      A.buildings.bridge = this._bakeProp(Town.buildBridge(), 2);
+      A.buildings.bridgeGhost = tintSprite(A.buildings.bridge, '#8ad4ff', 0.82, 0.9);
+    });
+    this._job(() => {
+      A.buildings.mill = this._bakeProp(Town.buildMillBody(), 2);
+      A.buildings.millGhost = tintSprite(A.buildings.mill, '#8ad4ff', 0.82, 0.9);
+    });
+    this._job(() => {
+      A.buildings.smithy = this._bakeProp(Town.buildSmithy(), 2);
+      A.buildings.smithyGhost = tintSprite(A.buildings.smithy, '#8ad4ff', 0.82, 0.9);
+    });
+    // Le pale del mulino, cotte in più angoli: girano davvero.
+    for (let k = 0; k < MILL_ANGLES; k += 4) {
+      this._job(() => {
+        A.millSails = A.millSails || [];
+        for (let i = k; i < Math.min(k + 4, MILL_ANGLES); i++) {
+          const m = Town.buildMillSails((i / MILL_ANGLES) * Math.PI / 2);
+          A.millSails[i] = bakeMesh(m, { outline: 1.5 });
+        }
+      });
+    }
+
+    /* ----------------------------------------------- arredi del paese */
+    this._job(() => {
+      A.village.wagon = this._bakeProp(Town.buildWagon(), 1.6);
+      A.village.trough = this._bakeProp(Town.buildTrough(), 1.6);
+      A.village.lamp = this._bakeProp(Town.buildLamp(), 1.5);
+    });
 
     /* --------------------------------------------- arredi del villaggio */
     // La staccionata va cotta in più orientamenti: solo così il recinto può

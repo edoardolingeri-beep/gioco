@@ -17,7 +17,12 @@ import { clamp, damp, easeOutBack, rgbToCss } from '../core/MathUtils.js';
 export const ROCK_STATE = { SOLID: 0, BROKEN: 1, REFORMING: 2 };
 
 export class RockEntity extends Entity {
-  constructor(x, z, sprite, rubbleSprite, scale = 1) {
+  /**
+   * @param {object} o opzioni: { resource, hits, regrow, requiredPick, hint }
+   *   Parametrizzando questi quattro valori la stessa classe serve sia la
+   *   pietra sia le vene di ferro della Fase 3.
+   */
+  constructor(x, z, sprite, rubbleSprite, scale = 1, o = {}) {
     super(x, z);
     this.sprite = sprite;
     this.rubbleSprite = rubbleSprite;
@@ -26,8 +31,14 @@ export class RockEntity extends Entity {
     this.solid = true;
     this.static = false;
 
+    this.resourceType = o.resource ?? 'stone';
+    this.requiredPick = o.requiredPick ?? 1;
+    this.hintText = o.hint ?? 'Serve il piccone ⛏️';
+    this.regrowDelay = o.regrow ?? CFG.harvest.rockRegrowDelay;
+    this.chipColor = o.chipColor ?? null;
+
     this.state = ROCK_STATE.SOLID;
-    this.maxHp = CFG.harvest.rockHits;
+    this.maxHp = o.hits ?? CFG.harvest.rockHits;
     this.hp = this.maxHp;
     this.harvestable = true;
 
@@ -39,8 +50,13 @@ export class RockEntity extends Entity {
     this.squash = 1;
   }
 
-  /** Il tipo di risorsa che produce (predisposto per ferro e oro). */
-  get resource() { return 'stone'; }
+  /** Il tipo di risorsa che produce. */
+  get resource() { return this.resourceType; }
+
+  /** Livello di piccone necessario per intaccarla. */
+  canMine(stats) {
+    return stats.hasPick && stats.pickLevel >= this.requiredPick;
+  }
 
   hit(damage, fromX, fromZ, game) {
     if (this.state !== ROCK_STATE.SOLID) return false;
@@ -54,7 +70,7 @@ export class RockEntity extends Entity {
     this.squash = 0.93;
 
     const hitY = 0.5 * this.scale;
-    game.fx.chips(this.x, hitY, this.z, 8, rgbToCss(PAL.stoneLight), 1, -dx / len, -dz / len);
+    game.fx.chips(this.x, hitY, this.z, 8, this.chipColor ?? rgbToCss(PAL.stoneLight), 1, -dx / len, -dz / len);
     game.fx.sparks(this.x, hitY, this.z, 3, 'rgba(255,240,200,1)', 0.5);
     game.audio.mine();
     game.haptics.fire('medium', 30);
@@ -78,9 +94,9 @@ export class RockEntity extends Entity {
     game.audio.rockBreak();
     game.haptics.fire('heavy', 0);
     game.cam.addShake(0.42);
-    game.fx.chips(this.x, 0.5 * this.scale, this.z, 18, rgbToCss(PAL.stone), 1.5);
+    game.fx.chips(this.x, 0.5 * this.scale, this.z, 18, this.chipColor ?? rgbToCss(PAL.stone), 1.5);
     game.fx.puff(this.x, 0.1, this.z, 10, 'rgba(198,200,208,0.85)', 1.1, 0.32);
-    game.spawnStones(this);
+    game.spawnOre(this);
   }
 
   update(dt, game) {
@@ -96,7 +112,7 @@ export class RockEntity extends Entity {
 
       case ROCK_STATE.BROKEN:
         this.timer += dt;
-        if (this.timer >= CFG.harvest.rockRegrowDelay) {
+        if (this.timer >= this.regrowDelay) {
           this.state = ROCK_STATE.REFORMING;
           this.growT = 0;
           game.fx.sparks(this.x, 0.3, this.z, 8, 'rgba(200,220,255,1)', 0.7);
@@ -152,14 +168,14 @@ export class RockEntity extends Entity {
    * di spiegare la progressione senza aprire un tutorial.
    */
   drawUI(ctx, cam, dpr, game) {
-    if (this.state !== ROCK_STATE.SOLID || game.stats.hasPick) return;
+    if (this.state !== ROCK_STATE.SOLID || this.canMine(game.stats)) return;
     const d2 = (game.player.x - this.x) ** 2 + (game.player.z - this.z) ** 2;
     if (d2 > 9) return;
     this.hintT = Math.min(1, (this.hintT ?? 0) + 0.12);
     drawPanel(ctx, cam, dpr, this.x, this.sprite.height * this.scale + 0.5, this.z, {
-      title: 'Serve il piccone ⛏️',
+      title: this.hintText,
       appear: this.hintT,
-      width: 150,
+      width: 172,
       titleColor: '#cbd2e0',
     });
   }

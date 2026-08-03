@@ -52,6 +52,8 @@ export class NPCEntity extends Entity {
     this.chatCooldown = fxRand.range(4, 12);
     this.workPhase = fxRand.range(0, TAU);
     this.bob = 0;
+    /** I carrettieri trascinano un carro: si vedono attraversare il paese. */
+    this.hauling = false;
   }
 
   /* -------------------------------------------------------------- update */
@@ -218,6 +220,18 @@ export class NPCEntity extends Entity {
     const depth = depthOf(0, this.z);
     r.shadow(this.x, this.z, 0.34, this.act === ACT.SIT ? 0.7 : 1);
     r.sprite(sp, this.x, this.bob, this.z, { depth });
+
+    // Il carro viene trainato dietro: sta sempre nella direzione opposta a
+    // quella di marcia, quindi basta un offset lungo -forward.
+    if (this.hauling) {
+      const cart = game.assets.village.wagon;
+      if (cart) {
+        const bx = -Math.sin(this.yaw), bz = -Math.cos(this.yaw);
+        const cx = this.x + bx * 1.25, cz = this.z + bz * 1.25;
+        r.shadow(cx, cz, 0.75, 0.9);
+        r.sprite(cart, cx, 0, cz, { depth: depthOf(0, cz) });
+      }
+    }
     void CHAR;
   }
 

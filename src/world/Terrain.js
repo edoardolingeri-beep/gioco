@@ -106,20 +106,49 @@ export class Terrain {
     this.blobCache = new Map();
   }
 
-  /** Restituisce (con cache) la macchia colorata richiesta. */
-  _blob(color) {
-    const key = color.join(',');
+  /**
+   * Restituisce (con cache) la macchia colorata richiesta.
+   * @param {string} style 'soil' = terra uniforme, 'cobble' = lastricato
+   */
+  _blob(color, style = 'soil') {
+    const key = style + color.join(',');
     let c = this.blobCache.get(key);
-    if (!c) {
-      const S = this.blobMask.width;
-      c = makeCanvas(S, S);
-      const ctx = c.getContext('2d');
-      ctx.drawImage(this.blobMask, 0, 0);
-      ctx.globalCompositeOperation = 'source-in';
-      ctx.fillStyle = rgbToCss(color);
-      ctx.fillRect(0, 0, S, S);
-      this.blobCache.set(key, c);
+    if (c) return c;
+
+    const S = this.blobMask.width;
+    c = makeCanvas(S, S);
+    const ctx = c.getContext('2d');
+    ctx.drawImage(this.blobMask, 0, 0);
+    ctx.globalCompositeOperation = 'source-in';
+    ctx.fillStyle = rgbToCss(color);
+    ctx.fillRect(0, 0, S, S);
+
+    if (style === 'cobble') {
+      // Ciottoli irregolari ritagliati dentro la macchia: è ciò che
+      // trasforma una chiazza grigia in una strada lastricata riconoscibile.
+      const rnd = new Rand(this.seed ^ 0xc0bb1e);
+      ctx.globalCompositeOperation = 'source-atop';
+      for (let i = 0; i < 42; i++) {
+        const cx = rnd.range(S * 0.1, S * 0.9);
+        const cy = rnd.range(S * 0.15, S * 0.85);
+        const rr = rnd.range(S * 0.045, S * 0.085);
+        const sides = rnd.int(5, 7);
+        ctx.beginPath();
+        for (let k = 0; k <= sides; k++) {
+          const a = (k / sides) * Math.PI * 2;
+          const r2 = rr * rnd.range(0.78, 1.12);
+          const x = cx + Math.cos(a) * r2, y = cy + Math.sin(a) * r2 * SIN_P;
+          if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = rgbToCss(rnd.chance(0.5)
+          ? mixRGB(color, PAL.cobbleL, rnd.range(0.25, 0.7))
+          : mixRGB(color, PAL.cobbleD, rnd.range(0.25, 0.7)));
+        ctx.fill();
+      }
     }
+
+    this.blobCache.set(key, c);
     return c;
   }
 
@@ -127,12 +156,20 @@ export class Terrain {
    * Aggiunge una macchia di terra battuta (radura, sentiero).
    * @param {number} x @param {number} z @param {number} r raggio in unità
    */
-  addDecal(x, z, r, color = PAL.dirt, alpha = 0.85, wobble = 0.16) {
-    this.decals.push({ x, z, r, color, alpha, wobble, seed: (Math.random() * 1e6) | 0 });
+  addDecal(x, z, r, color = PAL.dirt, alpha = 0.85, style = 'soil') {
+    this.decals.push({ x, z, r, color, alpha, style });
+    this._decalDirty = true;
   }
 
   /** Crea un sentiero fatto di macchie sovrapposte tra due punti. */
-  addPath(x1, z1, x2, z2, width = 0.9, step = 0.8) {
+  /**
+   * Sentiero fatto di macchie sovrapposte.
+   * `step` di default è proporzionale alla larghezza: le macchie si toccano
+   * appena, invece di accavallarsi (ogni sovrapposizione è area ridisegnata,
+   * ed è esattamente ciò che costa nel riempimento del terreno).
+   */
+  addPath(x1, z1, x2, z2, width = 0.9, step = 0, color = PAL.dirt, alpha = 0.16, style = 'soil') {
+    if (!step) step = width * 1.35;
     const dx = x2 - x1, dz = z2 - z1;
     const len = Math.hypot(dx, dz);
     const n = Math.max(1, Math.round(len / step));
@@ -143,7 +180,7 @@ export class Terrain {
         x1 + dx * t - dz / len * wob,
         z1 + dz * t + dx / len * wob,
         width * (0.85 + Math.sin(t * 11) * 0.15),
-        PAL.dirt, 0.16, 0.22,
+        color, alpha, style,
       );
     }
   }
@@ -167,16 +204,75 @@ export class Terrain {
     ctx.fillRect((-ox - 2) / k, (-oy - 2) / k, (view.w + 4) / k, (view.h + 4) / k);
     ctx.restore();
 
-    // decalcomanie visibili (macchia sfumata pre-cotta, schiacciata dalla proiezione)
-    const ppu = cam.ppu;
+    this._drawDecals(ctx, cam, view);
+  }
+
+  /**
+   * Le decalcomanie (radure, sentieri, strade lastricate) sono statiche, ma
+   * col paese cresciuto diventano un centinaio e si accavallano tutte sulla
+   * piazza: ridisegnarle ogni frame significa riempire lo schermo quattro o
+   * cinque volte in alpha, ed era di gran lunga la voce più cara del frame.
+   *
+   * Le raccogliamo quindi in un UNICO layer, rigenerato solo quando la
+   * camera esce dal margine o quando qualcosa cambia. A regime il costo per
+   * frame è un solo blit.
+   */
+  _drawDecals(ctx, cam, view) {
+    const cache = this._ensureDecalLayer(cam, view);
+    if (!cache) return;
+    // Il pixel (0,0) del layer corrisponde alla coordinata mondo `ox`:
+    // sullo schermo va quindi in (ox - cam.sx).
+    ctx.drawImage(cache.canvas, Math.round(cache.ox - cam.sx), Math.round(cache.oy - cam.sy));
+  }
+
+  /** Marca il layer da rigenerare (chiamato quando si aggiungono decal). */
+  invalidateDecals() { this._decalDirty = true; }
+
+  _ensureDecalLayer(cam, view) {
+    // margine attorno al viewport: finché la camera resta dentro, riusiamo
+    const MARGIN = 0.3;
+    const w = Math.ceil(view.w * (1 + MARGIN * 2));
+    const h = Math.ceil(view.h * (1 + MARGIN * 2));
+    let c = this._decalLayer;
+
+    const needNew = !c || c.canvas.width !== w || c.canvas.height !== h || c.ppu !== cam.ppu;
+    if (needNew) {
+      c = this._decalLayer = {
+        canvas: makeCanvas(w, h),
+        ctx: null, ox: 0, oy: 0, ppu: cam.ppu,
+      };
+      c.ctx = c.canvas.getContext('2d');
+      this._decalDirty = true;
+    }
+
+    // il layer copre [ox, ox+w] in pixel-mondo: se la camera esce, si rifà
+    const camX = cam.sx, camY = cam.sy;
+    const outside = camX < c.ox || camY < c.oy
+      || camX + view.w > c.ox + w || camY + view.h > c.oy + h;
+
+    if (this._decalDirty || outside) {
+      c.ox = Math.round(camX - view.w * MARGIN);
+      c.oy = Math.round(camY - view.h * MARGIN);
+      c.ppu = cam.ppu;
+      this._renderDecalLayer(c, w, h);
+      this._decalDirty = false;
+    }
+    return c;
+  }
+
+  _renderDecalLayer(c, w, h) {
+    const ctx = c.ctx;
+    const ppu = c.ppu;
+    ctx.clearRect(0, 0, w, h);
+
     for (const d of this.decals) {
-      const sx = d.x * ppu - cam.sx;
-      const sy = d.z * SIN_P * ppu - cam.sy;
-      const rw = d.r * ppu * 1.12;
+      const sx = d.x * ppu - c.ox;
+      const sy = d.z * SIN_P * ppu - c.oy;
+      const rw = d.r * ppu * 1.06;
       const rh = rw * SIN_P;
-      if (sx + rw < 0 || sx - rw > view.w || sy + rh < 0 || sy - rh > view.h) continue;
+      if (sx + rw < 0 || sx - rw > w || sy + rh < 0 || sy - rh > h) continue;
       ctx.globalAlpha = d.alpha;
-      ctx.drawImage(this._blob(d.color), sx - rw, sy - rh, rw * 2, rh * 2);
+      ctx.drawImage(this._blob(d.color, d.style), sx - rw, sy - rh, rw * 2, rh * 2);
     }
     ctx.globalAlpha = 1;
   }

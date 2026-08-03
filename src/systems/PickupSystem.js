@@ -141,7 +141,9 @@ export class PickupSystem {
     const list = this.pool.active;
     for (let i = 0; i < list.length; i++) {
       const p = list[i];
-      const sp = p.type === 'stone' ? assets.stoneDrop : assets.logDrop;
+      const sp = p.type === 'stone' ? assets.stoneDrop
+        : p.type === 'iron' ? assets.ironDrop
+        : assets.logDrop;
       if (p.y < 0.4) r.shadow(p.x, p.z, 0.26 * p.scale, clamp(1 - p.y * 1.4, 0.15, 1));
       r.sprite(sp, p.x, p.y - 0.115, p.z, {
         rot: p.rot * 0.35,

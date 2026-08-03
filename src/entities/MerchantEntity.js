@@ -53,7 +53,7 @@ export class MerchantEntity extends Entity {
 
     const type = game.carry.topType();
     if (!type) return;
-    const price = CFG.economy.prices[type] ?? 1;
+    const price = Math.round((CFG.economy.prices[type] ?? 1) * (game.stats.sellBonus ?? 1));
 
     this.feedTimer = CFG.deliver.interval * 1.15;
     game.carry.removeOne(type);
@@ -104,7 +104,7 @@ export class MerchantEntity extends Entity {
     const carrying = game.carry.total;
     const type = game.carry.topType() ?? 'wood';
     const info = RESOURCE_INFO[type];
-    const price = CFG.economy.prices[type] ?? 1;
+    const price = Math.round((CFG.economy.prices[type] ?? 1) * (game.stats.sellBonus ?? 1));
     drawPanel(ctx, cam, dpr, this.x, 3.5 + this.pulse * 0.15, this.z, {
       title: carrying
         ? `Vendo ${info.icon} → ${price} 🪙`

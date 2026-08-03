@@ -78,6 +78,10 @@ export const CFG = {
     rockHits: 6,          // picconate con il piccone di livello 1
     stonePerRock: 2,
     rockRegrowDelay: 30,
+    // Ferro (Fase 3): richiede il piccone d'acciaio
+    ironHits: 9,
+    ironPerVein: 2,
+    ironRegrowDelay: 45,
   },
 
   /* --------------------------------------------------------------- pickups */
@@ -99,7 +103,15 @@ export const CFG = {
 
   /* -------------------------------------------------------------- economia */
   economy: {
-    prices: { wood: 2, stone: 5, iron: 9, gold: 20 },
+    prices: { wood: 2, stone: 5, iron: 14, gold: 20 },
+  },
+
+  /* ------------------------------------------------------------- fiume */
+  river: {
+    baseZ: -19,     // posizione media del corso
+    width: 4.6,
+    amp1: 2.2,      // serpeggiamento principale
+    amp2: 1.3,      // seconda armonica: rende il corso meno regolare
   },
 
   /* ------------------------------------------------------------- villaggio */
@@ -148,6 +160,7 @@ export const CFG = {
     // La telecamera è ravvicinata: serve molta densità di dettagli, ma ogni
     // "chiazza" ne contiene già 5-9 in un'unica sprite (vedi buildGrassPatch).
     rockCount: 90,        // massi raccoglibili col piccone (Fase 2)
+    ironCount: 55,        // vene di ferro, solo oltre il fiume (Fase 3)
     patchCount: 1100,
     flowerCount: 130,
     pebbleCount: 260,
@@ -222,5 +235,20 @@ export const UPGRADES = [
     id: 'bag2', label: 'Zaino da Carico', desc: '+10 di capienza',
     cost: 340, icon: '🧳',
     apply: (s) => { s.bagLevel = 3; },
+  },
+  {
+    id: 'boots2', label: 'Stivali da Corsa', desc: 'Attraversi il paese in un lampo',
+    cost: 420, icon: '🥾',
+    apply: (s) => { s.bootsLevel = 3; },
+  },
+  {
+    id: 'armor2', label: 'Cotta di Maglia', desc: 'I lupi non ti spaventano più',
+    cost: 560, icon: '⛓️',
+    apply: (s) => { s.armorLevel = 3; },
+  },
+  {
+    id: 'bag3', label: 'Carriola', desc: '+12 di capienza',
+    cost: 720, icon: '🛒',
+    apply: (s) => { s.bagLevel = 4; },
   },
 ];
