@@ -123,6 +123,12 @@ export const CFG = {
     // La staccionata è un quadrato: questo è il semilato, non un raggio.
     fenceRadius: 8.6,
     safeRadius: 10,       // dentro questo raggio i nemici non compaiono
+    // Allargare il recinto (VillageSystem.expand): quanto cresce il
+    // semilato a ogni acquisto, e quanto costa (cresce a sua volta).
+    expansionStep: 3,
+    expansionBaseCost: 2500,
+    expansionGrowth: 1.8,
+    expansionMax: 3,      // oltre questo, il recinto non si allarga più
   },
 
   /* -------------------------------------------------------------- abitanti */

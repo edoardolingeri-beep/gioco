@@ -478,6 +478,7 @@ export class Game {
         wolvesKilled: this.stats.wolvesKilled,
         bearsKilled: this.stats.bearsKilled,
         villageLevel: this.village.level,
+        villageExpansions: this.village.expansions,
         dayTime: this.dayNight.time,
         traffic: { roads: this.traffic.enabled, tram: this.traffic.tramEnabled },
         workers: this.workers.counts,
@@ -556,7 +557,10 @@ export class Game {
       }
     }
 
-    // il villaggio torna al livello raggiunto, senza rigiocare le animazioni
+    // il villaggio torna al livello raggiunto, senza rigiocare le animazioni.
+    // Gli allargamenti del recinto vanno applicati PRIMA di restore(): la
+    // ricostruisce già alla misura giusta, non a quella base.
+    this.village.expansions = data.villageExpansions ?? 0;
     const lvl = data.villageLevel ?? (saved.hut?.state === BUILD_STATE.DONE ? 1 : 0);
     if (lvl > 0) { this.village.restore(lvl); this.spawner.enable(); }
     this.music.setPhase(this.village.phase);

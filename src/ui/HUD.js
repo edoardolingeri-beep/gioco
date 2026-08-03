@@ -11,6 +11,7 @@
 
 import { RESOURCE_INFO } from '../data/buildings.js';
 import { WORKER_TYPES } from '../data/workers.js';
+import { CFG } from '../data/config.js';
 
 export class HUD {
   constructor(game) {
@@ -217,6 +218,20 @@ export class HUD {
       });
     } else if (wb) {
       items.push({ note: '🎉 Personaggio già tutto potenziato' });
+    }
+
+    // Allargare il recinto: solo se esiste (compare con la staccionata,
+    // sparisce quando la città la smonta) e non è già al tetto previsto.
+    if (g.village.fenceHalfExtent > 0) {
+      const cost = g.village.expansionCost;
+      items.push(cost == null ? {
+        icon: '🏗️', title: 'Recinto del villaggio', desc: 'Già allargato al massimo', maxed: true,
+      } : {
+        icon: '🏗️', title: `Allarga il villaggio · ${g.village.expansions + 1}/${CFG.village.expansionMax}`,
+        desc: 'Più spazio dentro le mura, meno cose in mezzo ai piedi',
+        cost, can: g.stats.coins >= cost,
+        onBuy: () => { g.village.expand(g); this._renderShop(); },
+      });
     }
 
     for (const typeId of ['lumberjack', 'miner']) {

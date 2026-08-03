@@ -70,9 +70,12 @@ export class EnemySpawner {
   _findSpot(game) {
     const C = CFG.enemies;
     const p = game.player;
+    // Il villaggio si può allargare (vedi VillageSystem.expand): la zona
+    // sicura segue il recinto vero, non solo il raggio di base.
+    const safe = Math.max(CFG.village.safeRadius, game.village.fenceHalfExtent + 1.5);
     for (let i = 0; i < 24; i++) {
       const a = fxRand.range(0, TAU);
-      const r = fxRand.range(CFG.village.safeRadius + 3, CFG.world.radius - 4);
+      const r = fxRand.range(safe + 3, CFG.world.radius - 4);
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
 
       // né troppo vicino (imboscata) né troppo lontano (non lo incontreresti mai)

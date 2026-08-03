@@ -48,6 +48,11 @@ export class StaticProp extends Entity {
     this.shadow = o.shadow ?? 0;
     this.scale = o.scale ?? 1;
     this.flip = o.flip ?? false;
+    /** True per la vegetazione sparsa a caso in fase di generazione
+     *  (cespugli, sassi, ciuffi, fiori...): a differenza degli arredi del
+     *  villaggio, questi vanno tolti se il recinto (o una sua espansione)
+     *  finisce per inglobarli — vedi `VillageSystem._clearFlora`. */
+    this.natural = o.natural ?? false;
   }
 
   draw(r) {

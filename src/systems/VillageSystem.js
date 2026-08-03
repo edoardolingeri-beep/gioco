@@ -17,6 +17,8 @@ import { CFG } from '../data/config.js';
 import { GrowProp } from '../entities/GrowProp.js';
 import { FenceGateEntity } from '../entities/FenceGateEntity.js';
 import { NPCEntity } from '../entities/NPCEntity.js';
+import { TreeEntity } from '../entities/TreeEntity.js';
+import { RockEntity } from '../entities/RockEntity.js';
 import { PAL } from '../data/palette.js';
 import { FENCE_DIRS } from '../render/AssetForge.js';
 import { fxRand } from '../core/Rand.js';
@@ -307,6 +309,8 @@ export class VillageSystem {
     this.fenceHalfExtent = 0;
     /** Centro di ogni varco, nello stesso ordine dei lati. */
     this.gateCenters = [];
+    /** Quante volte il recinto è stato allargato a pagamento (`expand`). */
+    this.expansions = 0;
   }
 
   get maxLevel() { return STAGES.length; }
@@ -422,12 +426,17 @@ export class VillageSystem {
    */
   _buildFenceRing(instant) {
     const g = this.game;
-    const H = CFG.village.fenceRadius;     // ora è il semilato del quadrato
+    const H = this.fenceRadius;     // semilato del quadrato, allargabile
     const fences = g.assets.village.fences;
     const gates = g.assets.village.gates;
     if (!fences) return;
 
     this.fenceHalfExtent = H;
+    // Un recinto (o un suo allargamento) non deve inglobare alberi e
+    // vegetazione spontanea nati lì per la generazione della mappa: un
+    // villaggio recintato con alberi in mezzo al passaggio non si legge
+    // come "protetto", si legge come incompiuto.
+    this._clearFlora(H);
 
     const H_IDX = 0;                  // orientamento orizzontale, esatto
     const V_IDX = FENCE_DIRS / 2;      // orientamento verticale, esatto
@@ -494,6 +503,65 @@ export class VillageSystem {
         this.fenceLights.push(g.world.addLight(gx * 0.9, 1.55, gz * 0.9, {
           radius: 2.3, alpha: 0.62, flicker: true,
         }));
+      }
+    }
+  }
+
+  /** Semilato attuale del recinto quadrato, base più gli allargamenti già comprati. */
+  get fenceRadius() {
+    return CFG.village.fenceRadius + this.expansions * CFG.village.expansionStep;
+  }
+
+  /** Costo del prossimo allargamento, o null se già al massimo previsto. */
+  get expansionCost() {
+    if (this.expansions >= CFG.village.expansionMax) return null;
+    return Math.round(CFG.village.expansionBaseCost * (CFG.village.expansionGrowth ** this.expansions));
+  }
+
+  canExpand(game) {
+    return this.fenceHalfExtent > 0 && this.expansionCost != null && game.stats.coins >= this.expansionCost;
+  }
+
+  /**
+   * Allarga il recinto: costa monete (crescenti a ogni volta, fino a un
+   * tetto), e serve a chi trova il villaggio troppo affollato — più spazio
+   * per manovrare fra cartelli, cantieri e arredi, senza dover aspettare
+   * che la città lo smonti del tutto. Il vecchio anello sparisce all'istante
+   * (non è "la città che supera il recinto", quel messaggio resta per
+   * `_removeFence`) e il nuovo, più grande, sale con la stessa animazione
+   * di un livello normale.
+   */
+  expand(game) {
+    if (!this.canExpand(game)) return false;
+    const cost = this.expansionCost;
+    game.spendCoins(cost);
+    this.expansions++;
+    this._removeFence(true);
+    this._buildFenceRing(false);
+
+    game.audio.upgrade();
+    game.haptics.fire('success', 0);
+    game.cam.addShake(0.3);
+    game.hud.toast('Il villaggio si allarga! 🏗️');
+    return true;
+  }
+
+  /**
+   * Toglie dal quadrato del recinto (appena costruito o appena allargato)
+   * alberi e vegetazione spontanea nati dalla generazione della mappa:
+   * niente edifici, arredi del villaggio o cartelli, solo la natura
+   * "selvatica" — vedi `StaticProp.natural` e `entities/TreeEntity.js` /
+   * `entities/RockEntity.js`, gli unici tipi toccati.
+   */
+  _clearFlora(H) {
+    const g = this.game;
+    const out = g.scratch.floraSweep ?? (g.scratch.floraSweep = []);
+    g.grid.queryRect(-H, -H, H, H, out);
+    for (let i = 0; i < out.length; i++) {
+      const e = out[i];
+      if (e.dead) continue;
+      if (e instanceof TreeEntity || e instanceof RockEntity || e.natural) {
+        g.world.remove(e);
       }
     }
   }

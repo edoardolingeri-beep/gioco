@@ -131,10 +131,15 @@ export class World {
     this.terrain.addDecal(0, 0, 3.8, PAL.dirt, 0.3);
     this.terrain.addDecal(0.6, 1.2, 2.4, PAL.dirtDark, 0.16);
 
-    // punti chiave del villaggio di partenza
+    // punti chiave del villaggio di partenza. Il mercante e il banco erano
+    // quasi addosso a un varco del recinto (il mercante a 1.9 unità dal
+    // cancello est, il banco a 1.2 dal cancello sud): uscendo si finiva
+    // dentro la loro zona e si vendeva/spendeva per sbaglio solo passando.
+    // Spostati abbastanza lontano da ogni cancello (>5 unità) da non poterci
+    // mai stare dentro contemporaneamente.
     this.hutSpot = { x: -6.4, z: 3.2 };
-    this.merchantSpot = { x: 7.6, z: -1.6 };
-    this.benchSpot = { x: 1.2, z: 8.4 };
+    this.merchantSpot = { x: 3.5, z: 3.0 };
+    this.benchSpot = { x: -3.5, z: -3.0 };
 
     this.terrain.addPath(0, 0, this.hutSpot.x, this.hutSpot.z, 0.85);
     this.terrain.addPath(0, 0, this.merchantSpot.x, this.merchantSpot.z, 0.85);
@@ -169,14 +174,14 @@ export class World {
       const [x, z] = this._scatter(rnd, 4.5);
       if (this._blocked(x, z, 0.8)) continue;
       this.add(new StaticProp(x, z, rnd.pick(assets.bushes), {
-        solid: false, shadow: 0.34, scale: rnd.range(0.85, 1.2),
+        solid: false, shadow: 0.34, scale: rnd.range(0.85, 1.2), natural: true,
       }));
     }
     for (let i = 0; i < 26; i++) {
       const [x, z] = this._scatter(rnd, 7);
       if (this._blocked(x, z, 1.1)) continue;
       this.add(new StaticProp(x, z, rnd.pick(assets.rocks), {
-        solid: true, radius: 0.5, shadow: 0.5, scale: rnd.range(0.85, 1.25),
+        solid: true, radius: 0.5, shadow: 0.5, scale: rnd.range(0.85, 1.25), natural: true,
       }));
     }
 
@@ -253,19 +258,19 @@ export class World {
     for (let i = 0; i < W.patchCount; i++) {
       const [x, z] = this._scatter(rnd, 0);
       this.add(new StaticProp(x, z, rnd.pick(assets.patches), {
-        scale: rnd.range(0.8, 1.2), flip: rnd.chance(0.5),
+        scale: rnd.range(0.8, 1.2), flip: rnd.chance(0.5), natural: true,
       }));
     }
     for (let i = 0; i < W.flowerCount; i++) {
       const [x, z] = this._scatter(rnd, 0);
       this.add(new StaticProp(x, z, rnd.pick(assets.flowers), {
-        scale: rnd.range(0.85, 1.15), flip: rnd.chance(0.5),
+        scale: rnd.range(0.85, 1.15), flip: rnd.chance(0.5), natural: true,
       }));
     }
     for (let i = 0; i < W.pebbleCount; i++) {
       const [x, z] = this._scatter(rnd, 0);
       this.add(new StaticProp(x, z, rnd.pick(assets.pebbles), {
-        scale: rnd.range(0.8, 1.2), flip: rnd.chance(0.5),
+        scale: rnd.range(0.8, 1.2), flip: rnd.chance(0.5), natural: true,
       }));
     }
 

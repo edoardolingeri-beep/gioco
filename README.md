@@ -540,6 +540,39 @@ rombi staccati, non un recinto. Il modello (`buildFence` in
 `models/village.js`) ha ora traverse e pali intermedi più spessi apposta:
 restano leggeri visti di fronte, non svaniscono più visti di taglio.
 
+### Un villaggio che non si affolla, e non si vende per sbaglio
+
+Tre correzioni collegate, tutte sulla stessa lamentela: "c'è troppa roba in
+mezzo, e uscendo vendo cose per sbaglio".
+
+Il mercante e il banco dell'artigiano erano piazzati vicinissimi a un
+cancello (il mercante a 1.9 unità da quello a est, il banco a 1.2 da quello
+a sud) — uscendo dal recinto si finiva dentro la loro zona d'azione e si
+vendeva o si spendeva solo passando di lì. Spostati entrambi a più di 5
+unità da ogni cancello: la somma dei due raggi d'azione (quello del varco
+per aprirsi, quello del mercante o del banco per attivarsi) non arriva mai
+a coprire lo stesso punto, quindi non possono più scattare insieme.
+
+La staccionata, quando compare (o si allarga, vedi sotto), toglie dal suo
+interno alberi e vegetazione spontanea nati lì per la generazione casuale
+della mappa (`VillageSystem._clearFlora`) — un albero che rispunta in mezzo
+al passaggio, magari ricresciuto da un ceppo dopo che un operaio l'ha
+abbattuto, non si legge come natura che entra nel villaggio, si legge come
+un intoppo. Non tocca niente che sia stato messo lì apposta (edifici,
+arredi, cartelli): solo `TreeEntity`, `RockEntity` e le decorazioni
+marcate `natural` (cespugli, sassi, ciuffi, fiori — tutto ciò che
+`World.js` sparge a caso all'avvio).
+
+**Allargare il villaggio** è la risposta a "troppa roba, poco spazio": una
+voce del negozio (🏗️, compare solo mentre il recinto esiste) che ogni volta
+sposta il perimetro un po' più in là — fino a un tetto di tre allargamenti
+— a un costo crescente. `VillageSystem.expand()` fa sparire il vecchio
+anello all'istante e fa salire il nuovo con la stessa animazione di un
+livello normale, ripete la stessa pulizia di alberi vista sopra sulla
+fascia appena inglobata, e persino la zona sicura dei nemici
+(`EnemySpawner`) segue il recinto invece di restare ferma alla misura
+base — allargare le mura non deve far comparire un lupo dentro casa.
+
 ### Un secondo nemico, e la prima difesa che non serve azionare
 
 Il lupo per un po' è stato l'unico pericolo del gioco. Due aggiunte, pensate
