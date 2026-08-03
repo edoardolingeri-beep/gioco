@@ -1,0 +1,60 @@
+# Pubblica la versione web del gioco su GitHub Pages.
+#
+# Il gioco non ha bisogno di un bundler: `build.mjs` copia index.html, src/ e
+# styles/ dentro www/, e quella cartella è già il sito. Tutti i percorsi nel
+# codice sono relativi, quindi funziona anche servito da una sottocartella
+# (https://<utente>.github.io/gioco/).
+
+name: Pubblica su GitHub Pages
+
+on:
+  push:
+    branches: [claude/village-city-evolution-game-p36f2m]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Una pubblicazione alla volta; se ne arriva un'altra, questa lascia il posto.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Prepara www/
+        run: |
+          node build.mjs
+          # Senza questo file Pages passerebbe il sito da Jekyll, che ignora
+          # le cartelle con l'underscore e può rompere i percorsi.
+          touch www/.nojekyll
+
+      # `enablement: true` accende Pages la prima volta, senza passare dalle
+      # impostazioni del repository.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: www
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
