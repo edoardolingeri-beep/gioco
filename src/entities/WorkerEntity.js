@@ -209,7 +209,9 @@ export class WorkerEntity extends Entity {
 
   _deposit(game) {
     this.carrying = null;
-    this.station.stock = Math.min(this.station.def.stockCap, this.station.stock + 1);
+    const cap = game.workers.stockCap(this.def.id);
+    const amount = game.workers.harvestYield(this.def.id);
+    this.station.stock = Math.min(cap, this.station.stock + amount);
     game.fx.sparks(this.x, 1.1, this.z, 5, 'rgba(255,236,180,1)', 0.55);
     game.audio.plant();
   }

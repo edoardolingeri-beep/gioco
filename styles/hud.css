@@ -318,3 +318,77 @@
 
 /* La griglia delle statistiche ora ha più voci */
 .stat-row { grid-template-columns: repeat(4, 1fr); }
+
+/* ------------------------------------------------------------- negozio */
+
+.shop-card { gap: 10px; }
+
+.shop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 56vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.shop-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.05);
+}
+
+.shop-item-icon {
+  flex: none;
+  width: 34px;
+  font-size: 20px;
+  text-align: center;
+}
+
+.shop-item-body { flex: 1; min-width: 0; }
+
+.shop-item-title {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.shop-item-desc {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: .6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shop-buy {
+  flex: none;
+  padding: 9px 12px;
+  font-size: 13px;
+  background: var(--green);
+  color: #103018;
+}
+.shop-buy:disabled {
+  background: rgba(255,255,255,.1);
+  color: rgba(255,255,255,.4);
+  cursor: default;
+}
+
+.shop-max {
+  flex: none;
+  font-size: 11px;
+  font-weight: 900;
+  opacity: .55;
+  padding: 0 4px;
+}
+
+.shop-note {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: .7;
+  padding: 12px 0;
+}

@@ -37,7 +37,7 @@ const shot = (n) => `/tmp/wk-${n}.png`;
     const g = window.game;
     return Object.keys(g.workers.stations).map((id) => {
       const s = g.workers.stations[id];
-      return { id, x: +s.x.toFixed(1), z: +s.z.toFixed(1), cost: s.cost, count: s.count, cap: s.def.stockCap };
+      return { id, x: +s.x.toFixed(1), z: +s.z.toFixed(1), cost: s.cost, count: s.count, cap: g.workers.stockCap(id) };
     });
   });
   console.log('CARTELLI:', JSON.stringify(stations));
@@ -107,7 +107,7 @@ const shot = (n) => `/tmp/wk-${n}.png`;
   await page.evaluate(([x, z]) => {
     const g = window.game;
     const s = g.workers.stations.lumberjack;
-    s.stock = s.def.stockCap;   // magazzino pieno
+    s.stock = g.workers.stockCap('lumberjack');   // magazzino pieno
     g.player.x = 40; g.player.z = 40;   // il giocatore è lontano
     g.grid.update(g.player); g.cam.snapTo(40, 40);
   }, [lumberStation.x, lumberStation.z]);
@@ -117,7 +117,7 @@ const shot = (n) => `/tmp/wk-${n}.png`;
     const s = g.workers.stations.lumberjack;
     const workers = g.world.dynamic.filter((e) => e.constructor.name === 'WorkerEntity');
     return {
-      stock: s.stock, cap: s.def.stockCap,
+      stock: s.stock, cap: g.workers.stockCap('lumberjack'),
       operaiInAttesa: workers.filter((w) => w.state === 3 && w.carrying).length,
     };
   });

@@ -27,6 +27,8 @@ export class WorkerSystem {
     /** Scorta accumulata per tipo, letta da `load()` prima che i cartelli
      *  vengano ricreati: `registerStation` la applica appena nasce. */
     this.pendingStock = {};
+    /** Livelli comprati per tipo/leva: {typeId: {yield, capacity}}. */
+    this.levels = {};
   }
 
   /**
@@ -40,7 +42,7 @@ export class WorkerSystem {
     const x = building.x + (def.offX ?? 1.6);
     const z = building.z + (def.offZ ?? 0.7);
     const station = new HireStationEntity(x, z, def, this);
-    station.stock = Math.min(def.stockCap, this.pendingStock[typeId] ?? 0);
+    station.stock = Math.min(this.stockCap(typeId), this.pendingStock[typeId] ?? 0);
     this.stations[typeId] = station;
     this.game.world.add(station, true);
 
@@ -67,5 +69,48 @@ export class WorkerSystem {
     const out = {};
     for (const id in this.stations) out[id] = this.stations[id].stock;
     return out;
+  }
+
+  /* ------------------------------------------------- potenziamenti (negozio) */
+
+  /** Livello già comprato per quel tipo/leva (0 = mai potenziato). */
+  level(typeId, axis) { return this.levels[typeId]?.[axis] ?? 0; }
+
+  /** Quanta risorsa deposita l'operaio a ogni consegna. */
+  harvestYield(typeId) {
+    const u = WORKER_TYPES[typeId].upgrades.yield;
+    return u.base + this.level(typeId, 'yield') * u.step;
+  }
+
+  /** Capienza attuale del magazzino del cartello. */
+  stockCap(typeId) {
+    const u = WORKER_TYPES[typeId].upgrades.capacity;
+    return u.base + this.level(typeId, 'capacity') * u.step;
+  }
+
+  /** Costo del prossimo livello per quella leva, o null se già al massimo. */
+  upgradeCost(typeId, axis) {
+    const u = WORKER_TYPES[typeId].upgrades[axis];
+    const lvl = this.level(typeId, axis);
+    if (lvl >= u.maxLevel) return null;
+    return Math.round(u.cost * u.growth ** lvl);
+  }
+
+  /** Compra un livello, se il cartello esiste e le monete bastano. */
+  buyUpgrade(typeId, axis, game) {
+    if (!this.stations[typeId]) return false;
+    const cost = this.upgradeCost(typeId, axis);
+    if (cost == null || game.stats.coins < cost) return false;
+
+    game.spendCoins(cost);
+    this.levels[typeId] = this.levels[typeId] ?? { yield: 0, capacity: 0 };
+    this.levels[typeId][axis]++;
+
+    game.audio.upgrade();
+    game.haptics.fire('success', 0);
+    const st = this.stations[typeId];
+    game.fx.confetti(st.x, 1.3, st.z, 16);
+    game.hud.toast(`${WORKER_TYPES[typeId].upgrades[axis].label} potenziato!`);
+    return true;
   }
 }

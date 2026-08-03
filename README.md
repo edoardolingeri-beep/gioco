@@ -460,6 +460,26 @@ Il cartello compare vicino all'edificio che lo sblocca (`offX`/`offZ` in
 bosco o la cava: appena il recinto compare, il magazzino da ritirare resta
 dentro le mura invece di trovarsi appena fuori da un cancello.
 
+### Un negozio comprabile da ovunque, non solo un banco nel mondo
+
+Ogni altro potenziamento del gioco è un pannello sul posto — ti avvicini,
+resti fermo un istante, comprato. Per zaino/armi/personaggio funziona bene
+perché il banco dell'artigiano (`WorkbenchEntity`) è comunque una tappa
+naturale del percorso. Per gli operai no: il boscaiolo porta sempre lo
+stesso carico per consegna e il cartello si riempie sempre alla stessa
+capienza, due numeri che è comodo poter aggiustare in corsa, magari mentre
+sei dall'altra parte della mappa.
+
+Il pulsante 🛒 in HUD apre un pannello a schermo con l'elenco di ciò che si
+può comprare in questo momento: il prossimo potenziamento del personaggio
+(la stessa coda in `UPGRADES`, config.js) più, per ogni operaio già
+assunto, due leve indipendenti — `yield` (quanta risorsa porta a ogni
+consegna) e `capacity` (la capienza del magazzino) — definite in
+`data/workers.js` e gestite da `WorkerSystem.buyUpgrade`. Ogni livello
+costa `cost × growth^livelliGiàComprati`, fino a un tetto (`maxLevel`).
+`WorkbenchEntity.buy()` è lo stesso metodo chiamato sia dal banco fisico
+sia dal pulsante: un solo percorso d'acquisto, due modi di arrivarci.
+
 ### Un recinto quadrato, non un cerchio
 
 La prima versione era un anello di 44 tratti, ognuno orientato con la sprite

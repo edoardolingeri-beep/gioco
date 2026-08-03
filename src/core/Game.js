@@ -479,6 +479,7 @@ export class Game {
         traffic: { roads: this.traffic.enabled, tram: this.traffic.tramEnabled },
         workers: this.workers.counts,
         workersStock: this.workers.stockSnapshot(),
+        workersLevels: this.workers.levels,
         buildings,
         player: { x: this.player.x, z: this.player.z },
         carry: this.carry.stack.map((s) => s.type),
@@ -525,6 +526,7 @@ export class Game {
     // `onRestore`) li rimette al lavoro subito e applica la scorta salvata.
     if (data.workers) Object.assign(this.workers.counts, data.workers);
     if (data.workersStock) this.workers.pendingStock = data.workersStock;
+    if (data.workersLevels) this.workers.levels = data.workersLevels;
 
     // stato dei cantieri
     const saved = data.buildings ?? (data.hut ? { hut: data.hut } : {});

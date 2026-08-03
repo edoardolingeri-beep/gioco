@@ -10,6 +10,7 @@
  */
 
 import { RESOURCE_INFO } from '../data/buildings.js';
+import { WORKER_TYPES } from '../data/workers.js';
 
 export class HUD {
   constructor(game) {
@@ -32,6 +33,7 @@ export class HUD {
           <span class="chip-icon">👥</span>
           <b id="hud-pop">0</b>
         </div>
+        <button class="icon-btn" id="hud-shop" data-ui aria-label="Negozio">🛒</button>
         <button class="icon-btn" id="hud-menu" data-ui aria-label="Opzioni">⚙️</button>
       </div>
 
@@ -65,6 +67,14 @@ export class HUD {
           <button class="btn" id="opt-close">Chiudi</button>
         </div>
       </div>
+
+      <div class="sheet" id="hud-shop-sheet" data-ui hidden>
+        <div class="sheet-card shop-card">
+          <h2>Negozio 🛒</h2>
+          <div class="shop-list" id="shop-list"></div>
+          <button class="btn" id="shop-close">Chiudi</button>
+        </div>
+      </div>
     `;
 
     this.el = {
@@ -76,6 +86,8 @@ export class HUD {
       coinsN: this.root.querySelector('#hud-coins-n'),
       toasts: this.root.querySelector('#hud-toasts'),
       sheet: this.root.querySelector('#hud-sheet'),
+      shopSheet: this.root.querySelector('#hud-shop-sheet'),
+      shopList: this.root.querySelector('#shop-list'),
       stats: this.root.querySelector('#opt-stats'),
       village: this.root.querySelector('#hud-village'),
       pop: this.root.querySelector('#hud-pop'),
@@ -124,6 +136,13 @@ export class HUD {
     this.root.querySelector('#hud-menu').addEventListener('click', () => {
       this.el.sheet.hidden = false;
       this._refreshStats();
+    });
+    this.root.querySelector('#hud-shop').addEventListener('click', () => {
+      this.el.shopSheet.hidden = false;
+      this._renderShop();
+    });
+    this.root.querySelector('#shop-close').addEventListener('click', () => {
+      this.el.shopSheet.hidden = true;
     });
     this.root.querySelector('#opt-close').addEventListener('click', () => {
       this.el.sheet.hidden = true;
@@ -178,6 +197,76 @@ export class HUD {
   }
 
   /**
+   * Negozio: un pulsante fisso, comprabile da qualunque punto della mappa —
+   * a differenza del banco dell'artigiano e dei cartelli degli operai, che
+   * restano lì dove sono (ci si può ancora passare per lo stesso motivo).
+   * Stessa logica d'acquisto, solo un secondo modo di arrivarci.
+   */
+  _renderShop() {
+    const g = this.game;
+    const items = [];
+
+    const wb = g.world.workbench;
+    const up = wb?.next;
+    if (up) {
+      items.push({
+        icon: up.icon, title: up.label, desc: up.desc,
+        cost: up.cost, can: g.stats.coins >= up.cost,
+        onBuy: () => { wb.buy(g, up); this._renderShop(); },
+      });
+    } else if (wb) {
+      items.push({ note: '🎉 Personaggio già tutto potenziato' });
+    }
+
+    for (const typeId of ['lumberjack', 'miner']) {
+      const station = g.workers.stations[typeId];
+      if (!station) continue;
+      for (const axis of ['yield', 'capacity']) {
+        const def = WORKER_TYPES[typeId].upgrades[axis];
+        const cost = g.workers.upgradeCost(typeId, axis);
+        const current = axis === 'yield' ? g.workers.harvestYield(typeId) : g.workers.stockCap(typeId);
+        items.push({
+          icon: WORKER_TYPES[typeId].icon,
+          title: def.label,
+          desc: cost != null ? `${def.desc} (ora: ${current})` : `${def.desc} — al massimo`,
+          cost, can: cost != null && g.stats.coins >= cost,
+          maxed: cost == null,
+          onBuy: () => { g.workers.buyUpgrade(typeId, axis, g); this._renderShop(); },
+        });
+      }
+    }
+
+    this.el.shopList.innerHTML = items.map((it, i) => {
+      if (it.note) return `<div class="shop-note">${it.note}</div>`;
+      return `
+        <div class="shop-item">
+          <div class="shop-item-icon">${it.icon}</div>
+          <div class="shop-item-body">
+            <div class="shop-item-title">${it.title}</div>
+            <div class="shop-item-desc">${it.desc}</div>
+          </div>
+          ${it.maxed
+            ? `<span class="shop-max">MAX</span>`
+            : `<button class="btn shop-buy" data-i="${i}" data-cost="${it.cost}" ${it.can ? '' : 'disabled'}>${it.cost} 🪙</button>`}
+        </div>
+      `;
+    }).join('');
+
+    this.el.shopList.querySelectorAll('.shop-buy').forEach((btn) => {
+      btn.addEventListener('click', () => items[+btn.dataset.i].onBuy());
+    });
+  }
+
+  /** Aggiorna solo se un pulsante è comprabile o no — niente da ricostruire
+   *  finché il negozio resta aperto e le monete cambiano da sole. */
+  _refreshShopAfford() {
+    const coins = this.game.stats.coins;
+    this.el.shopList.querySelectorAll('.shop-buy').forEach((btn) => {
+      btn.disabled = coins < +btn.dataset.cost;
+    });
+  }
+
+  /**
    * Cartello dell'obiettivo. Il DOM viene toccato solo quando il testo cambia
    * davvero: scrivere ogni frame in `textContent` costringerebbe il browser a
    * rifare il layout sessanta volte al secondo per nulla.
@@ -229,6 +318,7 @@ export class HUD {
     }
 
     this._refreshQuest();
+    if (!this.el.shopSheet.hidden) this._refreshShopAfford();
 
     // Barra della salute: appare quando sei ferito e sparisce quando guarisci.
     const p = this.game.player;

@@ -53,13 +53,18 @@ export class WorkbenchEntity extends Entity {
         game.audio.pop(Math.floor(this.charge * 8));
         game.haptics.fire('light', 60);
       }
-      if (this.charge >= 1) this._buy(game, up);
+      if (this.charge >= 1) this.buy(game, up);
     } else {
       this.charge = damp(this.charge, 0, 8, dt);
     }
   }
 
-  _buy(game, up) {
+  /**
+   * Compra `up` (di norma `this.next`): usato sia dalla carica automatica
+   * di `update()` quando ci si ferma davanti al banco, sia dal pulsante
+   * negozio in HUD, che deve poter comprare da qualunque punto della mappa.
+   */
+  buy(game, up) {
     this.charge = 0;
     this.index++;
     this.pulse = 1;

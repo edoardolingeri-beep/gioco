@@ -48,7 +48,7 @@ export class HireStationEntity extends Entity {
   get count() { return this.workers.counts[this.def.id] ?? 0; }
   get maxed() { return this.count >= this.def.maxWorkers; }
   get cost() { return Math.round(this.def.hireCost * (this.def.costGrowth ** this.count)); }
-  get stockFull() { return this.stock >= this.def.stockCap; }
+  get stockFull() { return this.stock >= this.workers.stockCap(this.def.id); }
 
   update(dt, game) {
     this.pulse = damp(this.pulse, 0, 7, dt);
