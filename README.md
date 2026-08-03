@@ -9,7 +9,7 @@ libreria di gioco) e impacchettato come **app nativa** con Capacitor.
 
 ---
 
-## Stato: Fasi 1, 2 e 3 complete ✅
+## Stato: Fasi 1-4 complete ✅
 
 La prima fase è quella che il resto del gioco userà come fondamenta, quindi è
 stata rifinita fino in fondo prima di proseguire:
@@ -60,7 +60,23 @@ stata rifinita fino in fondo prima di proseguire:
 | Lampioni, abbeveratoi, nuovi arredi urbani | ✅ |
 | 11 potenziamenti, 8 costruzioni, 8 livelli di crescita | ✅ |
 
-Le fasi successive (città → metropoli, nuovi biomi) sono descritte in fondo:
+### Fase 4 — La grande città
+
+| Funzionalità | Stato |
+|---|---|
+| **Oro**: filoni rari nel profondo della sponda nord | ✅ |
+| **Municipio** con torre dell'orologio | ✅ |
+| **Botteghe** con vetrine, tendine e insegne | ✅ |
+| **Parco** con fontana zampillante, statua, aiuole e siepi | ✅ |
+| **Banca** con cupola: rendita passiva in monete | ✅ |
+| **Ospedale**: guarigione molto più rapida | ✅ |
+| **Strade asfaltate** con segnaletica orizzontale | ✅ |
+| La **staccionata viene smontata**: la città l'ha superata | ✅ |
+| Lampioni elettrici, panchine di ghisa, cestini, aiuole | ✅ |
+| Fino a 46 abitanti, con LOD di simulazione | ✅ |
+| 14 potenziamenti, 13 costruzioni, 13 livelli di crescita | ✅ |
+
+La Fase 5 (metropoli: grattacieli, auto, semafori, tram) è descritta in fondo:
 l'architettura è già predisposta.
 
 ---
@@ -74,7 +90,8 @@ Non ci sono menù: **tutto succede nel mondo**.
 - **Tagliare** — avvicinati a un albero e fermati: il personaggio inizia da solo.
 - **Scavare** — stessa cosa con i massi di pietra, ma serve il **piccone**
   (si compra al banco dell'artigiano). Senza, un fumetto te lo ricorda.
-  Il **ferro** sta oltre il fiume e vuole il piccone d'acciaio.
+  Il **ferro** sta oltre il fiume e vuole il piccone d'acciaio;
+  l'**oro** è più a nord ancora e serve il piccone da minatore.
 - **Attraversare** — il fiume ti blocca finché non costruisci il ponte.
   È il confine che rende la sponda nord una conquista.
 - **Combattere** — quando un lupo ti arriva addosso attacchi da solo. Se cadi
@@ -183,6 +200,7 @@ src/
     buildings.js           capanna, bancarella, banco dell'artigiano…
     village.js             segheria, cava, casa, magazzino e arredi
     town.js                ponte, mulino, fucina, vene di ferro, carri
+    city.js                municipio, botteghe, banca, ospedale, fontana, oro
     enemies.js             rig animato del lupo
 
   world/
@@ -226,6 +244,7 @@ tools/                     strumenti di sviluppo (Playwright)
     smoke-test.cjs         verifica end-to-end del ciclo di Fase 1
     phase2-test.cjs        verifica di pietra, cantieri, villaggio, lupi
     phase3-test.cjs        verifica di fiume, ponte, ferro, mulino, strade
+    phase4-test.cjs        verifica di oro, città, asfalto, parco, banca
     screenshots.cjs        cattura i momenti chiave
     phase2-shots.cjs       porta la partita a villaggio completo
     perf.cjs               profila il costo del frame
@@ -269,6 +288,9 @@ Altre scelte pensate per il telefono:
   significava riempire lo schermo quattro volte in alpha — di gran lunga la
   voce più cara del frame. Ora finiscono in un unico layer, rigenerato solo
   quando la camera esce dal margine;
+- **LOD di simulazione sugli abitanti**: con la città cresciuta sono decine;
+  quelli lontani continuano a muoversi verso le loro mete ma saltano
+  evitamento e chiacchiere, che nessuno vedrebbe;
 - **qualità adattiva**: se gli FPS calano, la risoluzione di rendering scende
   senza cambiare l'aspetto del gioco;
 - **audio sintetizzato** con WebAudio: zero file da caricare, e ogni colpo
@@ -283,7 +305,6 @@ Altre scelte pensate per il telefono:
 L'architettura è già pronta per crescere: ogni fase aggiunge moduli senza
 riscrivere quelli esistenti.
 
-- **Fase 4 — Città**: asfalto, negozi, lampioni, parco, fontane, folla di NPC.
 - **Fase 5 — Metropoli**: grattacieli, auto, semafori, tram.
 - **Trasversali**: nuovi biomi ai bordi della mappa (montagne, deserto,
   ghiacciaio, vulcano, isole), nemici con IA, combattimento automatico,

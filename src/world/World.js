@@ -148,8 +148,9 @@ export class World {
       const a = rnd.range(0, Math.PI * 2);
       const rr = Math.sqrt(rnd.next()) * W.radius;
       const x = Math.cos(a) * rr, z = Math.sin(a) * rr;
-      // deve essere oltre il fiume, con un margine dalla riva
-      if (!this.river.isBeyond(x, z - 2)) continue;
+      // Oltre il fiume di almeno due unità: `isBeyond(x, z + m)` è il test
+      // severo (con z - m sarebbe più permissivo, non meno).
+      if (!this.river.isBeyond(x, z + 2)) continue;
       if (this._blocked(x, z, 1.5)) continue;
       this.add(new RockEntity(
         x, z, rnd.pick(assets.ironVeins), rnd.pick(assets.rubble),
@@ -164,6 +165,30 @@ export class World {
         },
       ));
       irons++;
+    }
+
+    /* --- filoni d'oro (Fase 4): rari e nel profondo della sponda nord --- */
+    let golds = 0, goldGuard = 0;
+    while (golds < W.goldCount && goldGuard++ < W.goldCount * 80) {
+      const a = rnd.range(0, Math.PI * 2);
+      const rr = Math.sqrt(rnd.next()) * W.radius;
+      const x = Math.cos(a) * rr, z = Math.sin(a) * rr;
+      // molto oltre il fiume: l'oro va cercato
+      if (!this.river.isBeyond(x, z + 8)) continue;
+      if (this._blocked(x, z, 1.6)) continue;
+      this.add(new RockEntity(
+        x, z, rnd.pick(assets.goldVeins), rnd.pick(assets.rubble),
+        rnd.range(0.9, 1.1),
+        {
+          resource: 'gold',
+          hits: CFG.harvest.goldHits,
+          regrow: CFG.harvest.goldRegrowDelay,
+          requiredPick: 3,
+          hint: 'Serve il piccone da minatore ⚱️',
+          chipColor: 'rgb(246,202,74)',
+        },
+      ));
+      golds++;
     }
 
     /* --- dettagli del terreno (nessuna collisione, nessun update) ---

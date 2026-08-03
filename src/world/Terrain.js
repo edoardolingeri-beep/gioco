@@ -25,6 +25,8 @@ export class Terrain {
     this.ppu = ppu;
     this.seed = seed;
     this.decals = [];
+    /** Segnaletica orizzontale (rettangoli orientati). */
+    this.stripes = [];
     this._buildPattern();
   }
 
@@ -123,6 +125,28 @@ export class Terrain {
     ctx.fillStyle = rgbToCss(color);
     ctx.fillRect(0, 0, S, S);
 
+    if (style === 'asphalt') {
+      // Asfalto: granulosità fine e qualche chiazza di rappezzo. Niente
+      // ciottoli — la superficie deve leggersi come continua.
+      const rnd = new Rand(this.seed ^ 0xa5fa17);
+      ctx.globalCompositeOperation = 'source-atop';
+      for (let i = 0; i < 26; i++) {
+        ctx.globalAlpha = rnd.range(0.1, 0.3);
+        ctx.fillStyle = rgbToCss(rnd.chance(0.5) ? PAL.asphaltL : PAL.asphaltD);
+        const cx = rnd.range(0, S), cy = rnd.range(0, S);
+        const rr = rnd.range(S * 0.05, S * 0.16);
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rr, rr * SIN_P, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 0.28;
+      for (let i = 0; i < 260; i++) {
+        ctx.fillStyle = rnd.chance(0.5) ? rgbToCss(PAL.asphaltL) : rgbToCss(PAL.asphaltD);
+        ctx.fillRect(rnd.range(0, S), rnd.range(0, S), 2, 2);
+      }
+      ctx.globalAlpha = 1;
+    }
+
     if (style === 'cobble') {
       // Ciottoli irregolari ritagliati dentro la macchia: è ciò che
       // trasforma una chiazza grigia in una strada lastricata riconoscibile.
@@ -182,6 +206,25 @@ export class Terrain {
         width * (0.85 + Math.sin(t * 11) * 0.15),
         color, alpha, style,
       );
+    }
+
+    // L'asfalto porta con sé la segnaletica: linea tratteggiata al centro.
+    // Le strisce sono rettangoli orientati, non macchie tonde, quindi hanno
+    // una voce a parte nel layer.
+    if (style === 'asphalt') {
+      const stripeStep = 2.6;
+      const m = Math.max(1, Math.floor(len / stripeStep));
+      for (let i = 0; i < m; i++) {
+        const t = (i + 0.5) / m;
+        this.stripes.push({
+          x: x1 + dx * t,
+          z: z1 + dz * t,
+          len: 0.95,
+          w: 0.14,
+          angle: Math.atan2(dz * SIN_P, dx),
+        });
+      }
+      this._decalDirty = true;
     }
   }
 
@@ -275,5 +318,23 @@ export class Terrain {
       ctx.drawImage(this._blob(d.color, d.style), sx - rw, sy - rh, rw * 2, rh * 2);
     }
     ctx.globalAlpha = 1;
+
+    // segnaletica sopra l'asfalto
+    if (this.stripes.length) {
+      ctx.fillStyle = rgbToCss(PAL.roadLine);
+      ctx.globalAlpha = 0.85;
+      for (const st of this.stripes) {
+        const sx = st.x * ppu - c.ox;
+        const sy = st.z * SIN_P * ppu - c.oy;
+        if (sx < -60 || sx > w + 60 || sy < -60 || sy > h + 60) continue;
+        const L = st.len * ppu, W2 = st.w * ppu * SIN_P;
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.rotate(st.angle);
+        ctx.fillRect(-L / 2, -W2 / 2, L, W2);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
   }
 }

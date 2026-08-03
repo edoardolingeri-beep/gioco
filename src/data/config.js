@@ -82,6 +82,10 @@ export const CFG = {
     ironHits: 9,
     ironPerVein: 2,
     ironRegrowDelay: 45,
+    // Oro (Fase 4): raro, richiede il piccone da minatore
+    goldHits: 13,
+    goldPerVein: 1,
+    goldRegrowDelay: 70,
   },
 
   /* --------------------------------------------------------------- pickups */
@@ -103,7 +107,7 @@ export const CFG = {
 
   /* -------------------------------------------------------------- economia */
   economy: {
-    prices: { wood: 2, stone: 5, iron: 14, gold: 20 },
+    prices: { wood: 2, stone: 5, iron: 14, gold: 46 },
   },
 
   /* ------------------------------------------------------------- fiume */
@@ -124,7 +128,7 @@ export const CFG = {
   /* -------------------------------------------------------------- abitanti */
   npc: {
     speed: 1.85,
-    maxCount: 18,
+    maxCount: 46,
   },
 
   /* ---------------------------------------------------------------- nemici */
@@ -161,6 +165,7 @@ export const CFG = {
     // "chiazza" ne contiene già 5-9 in un'unica sprite (vedi buildGrassPatch).
     rockCount: 90,        // massi raccoglibili col piccone (Fase 2)
     ironCount: 55,        // vene di ferro, solo oltre il fiume (Fase 3)
+    goldCount: 20,        // filoni d'oro, rari e lontani (Fase 4)
     patchCount: 1100,
     flowerCount: 130,
     pebbleCount: 260,
@@ -250,5 +255,20 @@ export const UPGRADES = [
     id: 'bag3', label: 'Carriola', desc: '+12 di capienza',
     cost: 720, icon: '🛒',
     apply: (s) => { s.bagLevel = 4; },
+  },
+  {
+    id: 'pick3', label: 'Piccone da Minatore', desc: 'Estrai anche l\'oro',
+    cost: 900, icon: '⚱️',
+    apply: (s) => { s.pickLevel = 3; },
+  },
+  {
+    id: 'axe4', label: 'Ascia del Capomastro', desc: 'Un albero, un colpo',
+    cost: 1200, icon: '🪚',
+    apply: (s) => { s.axeLevel = 4; },
+  },
+  {
+    id: 'bag4', label: 'Furgone a Mano', desc: '+16 di capienza',
+    cost: 1600, icon: '🚚',
+    apply: (s) => { s.bagLevel = 5; },
   },
 ];

@@ -81,6 +81,7 @@ export class DeliverySystem {
       const sp = f.kind === 'coin' ? assets.coin
         : f.kind === 'stone' ? assets.stoneDrop
         : f.kind === 'iron' ? assets.ironDrop
+        : f.kind === 'gold' ? assets.goldDrop
         : assets.logDrop;
       r.sprite(sp, f.x, f.y, f.z, {
         rot: f.rot * 0.4,

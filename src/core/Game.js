@@ -34,7 +34,7 @@ import { BUILD_STATE } from '../entities/BuildingEntity.js';
 import { BUILD_ORDER, BUILDINGS } from '../data/buildings.js';
 
 const SAVE_KEY = 'gioco.save.v1';
-const SAVE_VERSIONS = [1, 2, 3];
+const SAVE_VERSIONS = [1, 2, 3, 4];
 
 export class Game {
   /**
@@ -74,9 +74,10 @@ export class Game {
       attackDamage: CFG.player.baseDamage,
       // bonus concessi dagli edifici
       logBonus: 0, stoneBonus: 0, ironBonus: 0, warehouseBonus: 0,
-      sellBonus: 1,
+      sellBonus: 1, income: 0, regenMul: 1,
       // contatori
-      treesChopped: 0, rocksMined: 0, ironMined: 0, wolvesKilled: 0, upgradeIndex: 0,
+      treesChopped: 0, rocksMined: 0, ironMined: 0, goldMined: 0,
+      wolvesKilled: 0, upgradeIndex: 0,
     };
 
     this.time = 0;
@@ -208,12 +209,12 @@ export class Game {
   /** Ricalcola i valori derivati dai livelli di potenziamento. */
   recomputeStats() {
     const s = this.stats;
-    s.axeDamage = [0, 1, 1.6, 2.4][s.axeLevel] ?? 1;
+    s.axeDamage = [0, 1, 1.6, 2.4, 4][s.axeLevel] ?? 1;
     s.chopSpeed = 1 + (s.axeLevel - 1) * 0.14;
-    s.pickDamage = [0, 1, 1.9][s.pickLevel] ?? 1;
+    s.pickDamage = [0, 1, 1.9, 2.8][s.pickLevel] ?? 1;
     s.mineSpeed = 1 + Math.max(0, s.pickLevel - 1) * 0.2;
     s.capacity = CFG.carry.baseCapacity
-      + (s.bagLevel - 1) * (s.bagLevel >= 3 ? 9 : 8)
+      + [0, 0, 8, 18, 30, 46][s.bagLevel]
       + s.warehouseBonus;
     s.speedMul = 1 + (s.bootsLevel - 1) * 0.22;
     s.attackDamage = CFG.player.baseDamage * (1 + (s.axeLevel - 1) * 0.45);
@@ -264,8 +265,11 @@ export class Game {
   /** Genera il minerale quando un masso o una vena vengono frantumati. */
   spawnOre(rock) {
     const type = rock.resource;
-    const base = type === 'iron' ? CFG.harvest.ironPerVein : CFG.harvest.stonePerRock;
-    const n = base + (type === 'stone' ? this.stats.stoneBonus : this.stats.ironBonus);
+    const base = { stone: CFG.harvest.stonePerRock, iron: CFG.harvest.ironPerVein,
+      gold: CFG.harvest.goldPerVein }[type] ?? 1;
+    const bonus = { stone: this.stats.stoneBonus, iron: this.stats.ironBonus,
+      gold: 0 }[type] ?? 0;
+    const n = base + bonus;
     for (let i = 0; i < n; i++) {
       const p = this.pickups.spawn(
         type,
@@ -274,7 +278,8 @@ export class Game {
       );
       p.age = -i * 0.05;
     }
-    if (type === 'iron') this.stats.ironMined++;
+    if (type === 'gold') this.stats.goldMined++;
+    else if (type === 'iron') this.stats.ironMined++;
     else this.stats.rocksMined++;
     this.bus.emit('rock:mined', rock);
   }
@@ -303,6 +308,18 @@ export class Game {
 
     this.quality.update(dt, this.loop.fps);
 
+    // Rendita della banca: piccole entrate periodiche, con la moneta che
+    // vola verso l'HUD come una vendita qualsiasi.
+    if (this.stats.income > 0) {
+      this._incomeT = (this._incomeT ?? 0) + dt;
+      if (this._incomeT >= 6) {
+        this._incomeT = 0;
+        const b = this.world.buildings.bank;
+        this.addCoins(this.stats.income, b.x, 2.4, b.z);
+        this.audio.coin(2);
+      }
+    }
+
     this._autoSave += dt;
     if (this._autoSave > 8) { this._autoSave = 0; this.save(); }
   }
@@ -330,7 +347,8 @@ export class Game {
     this.fx.draw(ctx, cam, this.assets.fx.spark);
     this.texts.draw(ctx, cam, r.dpr);
 
-    // 4. pannelli nel mondo
+    // 4. pannelli nel mondo (con budget di fumetti per non coprire il gioco)
+    this.bubbleBudget = 4;
     this.world.drawUI(ctx, cam, r.dpr, this);
 
     // 5. frecce verso gli obiettivi fuori schermo
@@ -386,7 +404,7 @@ export class Game {
         };
       }
       const data = {
-        v: 3,
+        v: 4,
         coins: this.stats.coins,
         axeLevel: this.stats.axeLevel,
         pickLevel: this.stats.pickLevel,
@@ -398,11 +416,14 @@ export class Game {
         stoneBonus: this.stats.stoneBonus,
         ironBonus: this.stats.ironBonus,
         sellBonus: this.stats.sellBonus,
+        income: this.stats.income,
+        regenMul: this.stats.regenMul,
         warehouseBonus: this.stats.warehouseBonus,
         upgradeIndex: w.workbench.index,
         treesChopped: this.stats.treesChopped,
         rocksMined: this.stats.rocksMined,
         ironMined: this.stats.ironMined,
+        goldMined: this.stats.goldMined,
         wolvesKilled: this.stats.wolvesKilled,
         villageLevel: this.village.level,
         buildings,
@@ -432,10 +453,13 @@ export class Game {
     s.stoneBonus = data.stoneBonus ?? 0;
     s.ironBonus = data.ironBonus ?? 0;
     s.sellBonus = data.sellBonus ?? 1;
+    s.income = data.income ?? 0;
+    s.regenMul = data.regenMul ?? 1;
     s.warehouseBonus = data.warehouseBonus ?? 0;
     s.treesChopped = data.treesChopped ?? 0;
     s.rocksMined = data.rocksMined ?? 0;
     s.ironMined = data.ironMined ?? 0;
+    s.goldMined = data.goldMined ?? 0;
     s.wolvesKilled = data.wolvesKilled ?? 0;
     this.recomputeStats();
 

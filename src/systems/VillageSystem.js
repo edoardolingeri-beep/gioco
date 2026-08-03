@@ -136,6 +136,81 @@ const STAGES = [
         poi: { kind: 'work', stopDist: 1.3 } },
     ],
   },
+
+  /* ------------------------------ Fase 4: la grande città -------------- */
+
+  /*
+   * liv. 9 — il municipio. È il momento in cui la città supera il villaggio:
+   * la staccionata viene smontata e le strade diventano asfalto.
+   */
+  {
+    name: 'Città',
+    npcs: 5,
+    haulers: 2,
+    removeFence: true,
+    asphaltRoads: true,
+    props: () => [
+      { sprite: 'cityLamp', x: 2.6, z: 9.2, shadow: 0.3, solid: true, radius: 0.28 },
+      { sprite: 'cityLamp', x: -2.6, z: 9.2, shadow: 0.3, solid: true, radius: 0.28 },
+      { sprite: 'cityBench', x: 3.4, z: 11.4, shadow: 0.55, solid: true, radius: 0.55,
+        poi: { kind: 'sit', stopDist: 0.85, yaw: Math.PI } },
+      { sprite: 'bin', x: 2.0, z: 11.6, shadow: 0.28, solid: true, radius: 0.28 },
+    ],
+  },
+
+  /* liv. 10 — le botteghe: la via dello struscio */
+  {
+    name: 'Città vivace',
+    npcs: 6,
+    haulers: 2,
+    props: () => [
+      { sprite: 'cityLamp', x: -9.4, z: 2.2, shadow: 0.3, solid: true, radius: 0.28 },
+      { sprite: 'cityLamp', x: -9.4, z: -1.6, shadow: 0.3, solid: true, radius: 0.28 },
+      { sprite: 'cityBench', x: -10.6, z: 0.4, shadow: 0.55, solid: true, radius: 0.55,
+        poi: { kind: 'sit', stopDist: 0.85, yaw: Math.PI / 2 } },
+      { sprite: 'flowerBed', x: -7.6, z: 4.2, shadow: 0.9 },
+      { sprite: 'bin', x: -8.4, z: -3.2, shadow: 0.28, solid: true, radius: 0.28 },
+    ],
+  },
+
+  /* liv. 11 — il parco: verde, siepi e la statua del boscaiolo */
+  {
+    name: 'Città verde',
+    npcs: 6,
+    parkProps: true,
+    props: () => [
+      { sprite: 'cityLamp', x: 9.6, z: 6.4, shadow: 0.3, solid: true, radius: 0.28 },
+      { sprite: 'cityLamp', x: 9.6, z: 11.2, shadow: 0.3, solid: true, radius: 0.28 },
+    ],
+  },
+
+  /* liv. 12 — la banca */
+  {
+    name: 'Città ricca',
+    npcs: 6,
+    haulers: 2,
+    props: () => [
+      { sprite: 'cityLamp', x: -5.2, z: 12.4, shadow: 0.3, solid: true, radius: 0.28 },
+      { sprite: 'cityBench', x: -10.8, z: 12.6, shadow: 0.55, solid: true, radius: 0.55,
+        poi: { kind: 'sit', stopDist: 0.85, yaw: 0 } },
+      { sprite: 'flowerBed', x: -6.0, z: 16.4, shadow: 0.9 },
+      { sprite: 'hedge', x: -10.4, z: 16.6, shadow: 0.75, solid: true, radius: 0.75 },
+    ],
+  },
+
+  /* liv. 13 — l'ospedale: la grande città è completa (fine Fase 4) */
+  {
+    name: 'Grande città',
+    npcs: 7,
+    haulers: 3,
+    props: () => [
+      { sprite: 'cityLamp', x: 7.0, z: 12.6, shadow: 0.3, solid: true, radius: 0.28 },
+      { sprite: 'cityLamp', x: 13.0, z: 13.0, shadow: 0.3, solid: true, radius: 0.28 },
+      { sprite: 'flowerBed', x: 8.0, z: 17.2, shadow: 0.9 },
+      { sprite: 'hedge', x: 12.6, z: 17.4, shadow: 0.75, solid: true, radius: 0.75 },
+      { sprite: 'bin', x: 6.2, z: 16.0, shadow: 0.28, solid: true, radius: 0.28 },
+    ],
+  },
 ];
 
 export class VillageSystem {
@@ -146,6 +221,8 @@ export class VillageSystem {
     this.pointsOfInterest = [];
     this.npcs = [];
     this.stageName = 'Radura';
+    /** Segmenti della staccionata: la città li smonterà. */
+    this.fenceProps = [];
   }
 
   get maxLevel() { return STAGES.length; }
@@ -185,7 +262,10 @@ export class VillageSystem {
     });
 
     if (stage.fenceRing) this._buildFenceRing(instant);
+    if (stage.removeFence) this._removeFence(instant);
     if (stage.cobbleRoads) this._paveRoads();
+    if (stage.asphaltRoads) this._paveAsphalt();
+    if (stage.parkProps) this._buildPark(instant);
 
     for (let i = 0; i < (stage.npcs ?? 0); i++) {
       this.spawnNPC(instant ? 0 : 0.6 + i * 0.5);
@@ -241,16 +321,17 @@ export class VillageSystem {
         instant, silent: instant,
       });
       g.world.add(prop, !instant);
+      this.fenceProps.push(prop);
     }
 
     // il cancello vero e proprio
     const gx = Math.cos(gateAngle) * R, gz = Math.sin(gateAngle) * R;
     const gate = g.assets.village.gate;
     if (gate) {
-      g.world.add(new GrowProp(gx, gz, gate, {
+      this.fenceProps.push(g.world.add(new GrowProp(gx, gz, gate, {
         solid: false, radius: 0.9, shadow: 0.5,
         delay: instant ? 0 : 1.2, instant, silent: instant,
-      }), !instant);
+      }), !instant));
     }
   }
 
@@ -284,15 +365,92 @@ export class VillageSystem {
     g.hud.toast('Le strade sono state lastricate 🧱');
   }
 
+  /**
+   * Smonta la staccionata: la città è cresciuta oltre il vecchio perimetro.
+   * È il segnale più forte del passaggio da paese a città.
+   */
+  _removeFence(instant) {
+    const g = this.game;
+    for (const p of this.fenceProps) {
+      if (instant) { g.world.remove(p); continue; }
+      // sprofondano nel terreno una dopo l'altra, con un po' di polvere
+      p.solid = false;
+      g.world.remove(p);
+      g.fx.puff(p.x, 0.05, p.z, 3, 'rgba(206,190,160,0.8)', 0.5, 0.2);
+    }
+    this.fenceProps.length = 0;
+    if (!instant) {
+      g.hud.toast('La città ha superato il vecchio recinto 🏙️');
+      g.cam.addShake(0.15);
+    }
+  }
+
+  /** Asfalto: le strade di pietra diventano carreggiate con la segnaletica. */
+  _paveAsphalt() {
+    const g = this.game;
+    const t = g.world.terrain;
+    const B = g.world.buildings;
+    const hubs = [
+      { x: 0, z: 0 },
+      { x: B.townhall.x, z: B.townhall.z - 3.2 },
+      { x: B.shops.x + 3.0, z: B.shops.z },
+      { x: B.park.x - 3.0, z: B.park.z },
+      { x: B.bank.x + 1.5, z: B.bank.z - 3.0 },
+      { x: B.hospital.x - 1.5, z: B.hospital.z - 3.0 },
+      g.world.merchantSpot,
+      { x: B.mill.x, z: B.mill.z + 2.5 },
+      { x: B.smithy.x, z: B.smithy.z + 2.5 },
+      { x: B.bridge.x, z: B.bridge.z + 4.0 },
+    ];
+    for (let i = 1; i < hubs.length; i++) {
+      t.addPath(hubs[0].x, hubs[0].z, hubs[i].x, hubs[i].z, 1.35, 1.7,
+        PAL.asphalt, 0.95, 'asphalt');
+    }
+    t.addDecal(0, 0, 4.0, PAL.asphalt, 0.95, 'asphalt');
+    g.hud.toast('Strade asfaltate 🛣️');
+  }
+
+  /** Il parco attorno alla fontana: siepi, aiuole, panchine e la statua. */
+  _buildPark(instant) {
+    const g = this.game;
+    const b = g.world.buildings.park;
+    const A = g.assets.village;
+    const items = [
+      ['statue', -3.4, -0.6, { shadow: 0.6, solid: true, radius: 0.7 }],
+      ['flowerBed', 2.6, -1.8, { shadow: 0.9 }],
+      ['flowerBed', -2.4, 2.6, { shadow: 0.9 }],
+      ['hedge', 3.2, 2.2, { shadow: 0.75, solid: true, radius: 0.75 }],
+      ['hedge', -3.6, 2.6, { shadow: 0.75, solid: true, radius: 0.75 }],
+      ['cityBench', 0.2, 3.0, { shadow: 0.55, solid: true, radius: 0.55,
+        poi: { kind: 'sit', stopDist: 0.85, yaw: Math.PI } }],
+      ['cityBench', -0.2, -3.2, { shadow: 0.55, solid: true, radius: 0.55,
+        poi: { kind: 'sit', stopDist: 0.85, yaw: 0 } }],
+      ['bin', 2.4, 3.2, { shadow: 0.28, solid: true, radius: 0.28 }],
+    ];
+    items.forEach(([id, dx, dz, o], i) => {
+      const sprite = A[id];
+      if (!sprite) return;
+      const prop = new GrowProp(b.x + dx, b.z + dz, sprite, {
+        ...o, delay: instant ? 0 : 0.4 + i * 0.18, instant, silent: instant,
+      });
+      g.world.add(prop, !instant);
+      if (o.poi) this.addPOI(b.x + dx, b.z + dz, o.poi.kind, o.poi.stopDist, o.poi.yaw);
+    });
+    // il prato del parco
+    g.world.terrain.addDecal(b.x, b.z, 4.6, PAL.parkGrass, 0.5);
+    this.addPOI(b.x, b.z + 2.4, 'work', 1.6);
+  }
+
   /** Aggiunge un abitante che entra nel villaggio dal bosco. */
   spawnNPC(delay = 0) {
     const g = this.game;
     const variants = g.assets.npc?.length ?? 0;
-    if (!variants) return;
+    if (!variants || this.npcs.length >= CFG.npc.maxCount) return;
 
     // entra dal bordo del villaggio, così lo vedi arrivare
     const a = fxRand.range(0, TAU);
-    const r = CFG.village.fenceRadius + fxRand.range(1, 3);
+    // Con la città che si allarga, i nuovi arrivati entrano da più lontano.
+    const r = CFG.village.fenceRadius + this.level * 0.9 + fxRand.range(1, 4);
     const npc = new NPCEntity(
       Math.cos(a) * r, Math.sin(a) * r,
       (Math.random() * variants) | 0, g,

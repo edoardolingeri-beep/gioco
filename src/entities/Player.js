@@ -148,7 +148,7 @@ export class Player extends Entity {
 
     // Rigenerazione: riparte solo dopo un po' che non prendi colpi.
     if (this.hp < this.maxHp && this.sinceDamage > P.regenDelay) {
-      this.hp = Math.min(this.maxHp, this.hp + P.regenRate * dt);
+      this.hp = Math.min(this.maxHp, this.hp + P.regenRate * (game.stats.regenMul ?? 1) * dt);
     }
 
     const maxSpeed = P.speed * (game.stats.speedMul ?? 1)
@@ -423,6 +423,7 @@ export class Player extends Entity {
       wood: A.carriedLogs ? A.carriedLogs[di] : A.carriedLog,
       stone: A.carriedStones ? A.carriedStones[di] : A.carriedLog,
       iron: A.carriedIrons ? A.carriedIrons[di] : A.carriedLog,
+      gold: A.carriedGolds ? A.carriedGolds[di] : A.carriedLog,
     };
 
     const n = stack.length;

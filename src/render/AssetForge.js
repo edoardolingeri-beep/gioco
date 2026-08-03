@@ -16,6 +16,7 @@ import * as Nature from '../models/nature.js';
 import * as Build from '../models/buildings.js';
 import * as Village from '../models/village.js';
 import * as Town from '../models/town.js';
+import * as City from '../models/city.js';
 import { buildCharacter, buildCarriedLog, CHAR, TOOL } from '../models/character.js';
 import { buildWolf, buildAlertMark, ENEMY } from '../models/enemies.js';
 import { rotY as rotateMeshY } from './Mesh.js';
@@ -55,10 +56,14 @@ const VARIANTS = {
   oreRock: 6,  // massi raccoglibili
   rubble: 3,
   ironVein: 5, // vene di ferro (Fase 3)
+  goldVein: 4, // filoni d'oro (Fase 4)
 };
 
 /** Angoli pre-cotti delle pale del mulino: bastano per un moto fluido. */
 const MILL_ANGLES = 16;
+
+/** Fotogrammi dei getti della fontana. */
+const JET_FRAMES = 7;
 
 /**
  * Applica una tinta uniforme a una sprite già cotta (per i "fantasmi"
@@ -82,7 +87,7 @@ export class AssetForge {
     this.assets = {
       trees: [], stumps: [], saplings: [], bushes: [],
       tufts: [], flowers: [], pebbles: [], rocks: [], patches: [],
-      oreRocks: [], rubble: [], ironVeins: [],
+      oreRocks: [], rubble: [], ironVeins: [], goldVeins: [],
       char: null, wolf: null, npc: [],
       buildings: {}, village: {}, fx: {},
     };
@@ -175,18 +180,23 @@ export class AssetForge {
       for (let i = 0; i < VARIANTS.ironVein; i++) {
         A.ironVeins.push(this._bakeProp(Town.buildIronVein(rnd), 1.8));
       }
+      for (let i = 0; i < VARIANTS.goldVein; i++) {
+        A.goldVeins.push(this._bakeProp(City.buildGoldVein(rnd), 1.8));
+      }
     });
 
     this._job(() => {
       A.logDrop = this._bakeProp(Nature.buildLogDrop(), 1.5);
       A.stoneDrop = this._bakeProp(Nature.buildStoneDrop(), 1.5);
       A.ironDrop = this._bakeProp(Town.buildIronDrop(), 1.5);
+      A.goldDrop = this._bakeProp(City.buildGoldDrop(), 1.5);
       A.coin = this._bakeProp(Nature.buildCoin(), 1.5);
       A.alertMark = this._bakeProp(buildAlertMark(), 1.5);
     });
     this._job(() => {
       A.carriedStones = [];
       A.carriedIrons = [];
+      A.carriedGolds = [];
       for (let d = 0; d < CHAR.dirs; d++) {
         const a = (d / CHAR.dirs) * Math.PI * 2;
         const st = Nature.buildCarriedStone();
@@ -195,6 +205,9 @@ export class AssetForge {
         const ir = Town.buildCarriedIron();
         rotateMeshY(ir, a);
         A.carriedIrons.push(bakeMesh(ir, { outline: 1.4 }));
+        const go = City.buildCarriedGold();
+        rotateMeshY(go, a);
+        A.carriedGolds.push(bakeMesh(go, { outline: 1.4 }));
       }
     });
 
@@ -265,6 +278,40 @@ export class AssetForge {
         }
       });
     }
+
+    /* ------------------------------------------------- edifici di Fase 4 */
+    const phase4 = [
+      ['townhall', City.buildTownHall],
+      ['shops', City.buildShops],
+      ['bank', City.buildBank],
+      ['hospital', City.buildHospital],
+      ['fountain', City.buildFountain],
+    ];
+    for (const [id, fn] of phase4) {
+      this._job(() => {
+        A.buildings[id] = this._bakeProp(fn(), 2);
+        A.buildings[id + 'Ghost'] = tintSprite(A.buildings[id], '#8ad4ff', 0.82, 0.9);
+      });
+    }
+    // I getti della fontana: pochi fotogrammi in ciclo continuo.
+    this._job(() => {
+      A.fountainJets = [];
+      for (let i = 0; i < JET_FRAMES; i++) {
+        A.fountainJets.push(bakeMesh(City.buildFountainJets(i / JET_FRAMES), { outline: 1.2 }));
+      }
+    });
+
+    /* ------------------------------------------------ arredi della città */
+    this._job(() => {
+      A.village.cityLamp = this._bakeProp(City.buildCityLamp(), 1.5);
+      A.village.cityBench = this._bakeProp(City.buildCityBench(), 1.5);
+      A.village.bin = this._bakeProp(City.buildBin(), 1.4);
+      A.village.hedge = this._bakeProp(City.buildHedge(), 1.5);
+    });
+    this._job(() => {
+      A.village.statue = this._bakeProp(City.buildStatue(), 1.8);
+      A.village.flowerBed = this._bakeProp(City.buildFlowerBed(rnd), 1.4);
+    });
 
     /* ----------------------------------------------- arredi del paese */
     this._job(() => {

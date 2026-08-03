@@ -143,6 +143,7 @@ export class PickupSystem {
       const p = list[i];
       const sp = p.type === 'stone' ? assets.stoneDrop
         : p.type === 'iron' ? assets.ironDrop
+        : p.type === 'gold' ? assets.goldDrop
         : assets.logDrop;
       if (p.y < 0.4) r.shadow(p.x, p.z, 0.26 * p.scale, clamp(1 - p.y * 1.4, 0.15, 1));
       r.sprite(sp, p.x, p.y - 0.115, p.z, {

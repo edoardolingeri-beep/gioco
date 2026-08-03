@@ -63,6 +63,11 @@ export class NPCEntity extends Entity {
     this.chatCooldown -= dt;
     this.bubbleT = Math.max(0, this.bubbleT - dt);
 
+    // LOD di simulazione: con la città cresciuta gli abitanti sono decine.
+    // Quelli lontani continuano a muoversi verso le loro mete, ma saltano i
+    // controlli costosi (evitamento e chiacchiere), che nessuno vedrebbe.
+    const far = dist(this.x, this.z, game.player.x, game.player.z) > 26;
+
     switch (this.act) {
       case ACT.GO: this._go(dt, game); break;
       case ACT.WORK: this._work(dt, game); break;
@@ -75,7 +80,7 @@ export class NPCEntity extends Entity {
 
     this.x += this.vx * dt;
     this.z += this.vz * dt;
-    this._avoid(game);
+    if (!far) this._avoid(game);
     game.grid.update(this);
 
     const spd = Math.hypot(this.vx, this.vz);
@@ -109,7 +114,7 @@ export class NPCEntity extends Entity {
       this.act = t.kind === 'sit' ? ACT.SIT : t.kind === 'work' ? ACT.WORK : ACT.IDLE;
       this.actTimer = fxRand.range(4, 9);
       this.vx = this.vz = 0;
-      if (this.act === ACT.WORK) {
+      if (this.act === ACT.WORK && Math.random() < 0.4) {
         this.bubble = WORK_MARKS[(Math.random() * WORK_MARKS.length) | 0];
         this.bubbleT = 2.5;
       }
@@ -123,7 +128,10 @@ export class NPCEntity extends Entity {
     this.yaw = angleTowards(this.yaw, Math.atan2(dx, dz), 7 * dt);
 
     // due abitanti che si incontrano si fermano a chiacchierare
-    if (this.chatCooldown <= 0) this._maybeChat(game);
+    if (this.chatCooldown <= 0
+        && dist(this.x, this.z, game.player.x, game.player.z) < 14) {
+      this._maybeChat(game);
+    }
   }
 
   _work(dt) {
@@ -165,12 +173,12 @@ export class NPCEntity extends Entity {
       o.yaw = Math.atan2(this.x - o.x, this.z - o.z);
       this.act = o.act = ACT.CHAT;
       this.actTimer = o.actTimer = fxRand.range(2.5, 4.5);
-      this.chatCooldown = o.chatCooldown = fxRand.range(12, 25);
+      this.chatCooldown = o.chatCooldown = fxRand.range(26, 50);
       this.say(CHATTER[(Math.random() * CHATTER.length) | 0]);
       o.say(CHATTER[(Math.random() * CHATTER.length) | 0], 1.2);
       return;
     }
-    this.chatCooldown = fxRand.range(3, 7);
+    this.chatCooldown = fxRand.range(6, 14);
   }
 
   say(text, delay = 0) {
@@ -235,9 +243,18 @@ export class NPCEntity extends Entity {
     void CHAR;
   }
 
-  /** Fumetto con la battuta, in coordinate schermo. */
+  /**
+   * Fumetto con la battuta.
+   *
+   * In una piazza da quaranta abitanti i fumetti si moltiplicano fino a
+   * coprire il gioco: ne mostriamo pochi alla volta, dando la precedenza a
+   * chi è vicino al giocatore. Il budget è azzerato ad ogni frame dal Game.
+   */
   drawUI(ctx, cam, dpr, game) {
     if (this.bubbleT <= 0 || !this.bubble) return;
+    if (game.bubbleBudget <= 0) return;
+    if (dist(this.x, this.z, game.player.x, game.player.z) > 11) return;
+    game.bubbleBudget--;
     const alpha = clamp(this.bubbleT / 0.5, 0, 1);
     const sx = this.x * cam.ppu - cam.sx;
     const sy = projectY(1.85 + this.bob, this.z) * cam.ppu - cam.sy;

@@ -170,8 +170,93 @@ Object.assign(BUILDINGS, {
   },
 });
 
+/* ------------------------------------------------------------- Fase 4 */
+
+Object.assign(BUILDINGS, {
+  /** Il municipio segna il passaggio da paese a città: arriva l'asfalto. */
+  townhall: {
+    id: 'townhall',
+    name: 'Municipio',
+    sprite: 'townhall',
+    requires: 'smithy',
+    unlockCost: 800,
+    cost: { wood: 200, stone: 220, iron: 60 },
+    radius: 2.2,
+    zone: 3.6,
+    spot: { x: 0, z: 14.2 },
+    perk: 'La città prende forma',
+  },
+
+  shops: {
+    id: 'shops',
+    name: 'Botteghe',
+    sprite: 'shops',
+    requires: 'townhall',
+    unlockCost: 1000,
+    cost: { wood: 240, stone: 180, iron: 40 },
+    radius: 2.4,
+    zone: 3.6,
+    spot: { x: -13.6, z: 2.6 },
+    perk: 'Le merci valgono di più',
+    effect: (s) => { s.sellBonus += 0.6; },
+  },
+
+  park: {
+    id: 'park',
+    name: 'Parco',
+    sprite: 'fountain',
+    requires: 'shops',
+    unlockCost: 1200,
+    cost: { wood: 150, stone: 260 },
+    radius: 1.9,
+    zone: 3.4,
+    spot: { x: 13.6, z: 8.6 },
+    perk: 'La città respira',
+    /** I getti d'acqua scorrono: sono cotti in pochi fotogrammi. */
+    overlay: (r, game, self) => {
+      const jets = game.assets.fountainJets;
+      if (!jets) return;
+      const i = Math.floor(self.spin * 7) % jets.length;
+      r.sprite(jets[i], self.x, 0, self.z, { depth: self.depth + 0.02 });
+      if (Math.random() < 0.05) {
+        game.fx.sparks(self.x + (Math.random() - 0.5) * 2, 1.5, self.z + 0.6, 1,
+          'rgba(190,230,255,1)', 0.35);
+      }
+    },
+  },
+
+  bank: {
+    id: 'bank',
+    name: 'Banca',
+    sprite: 'bank',
+    requires: 'park',
+    unlockCost: 1600,
+    cost: { stone: 300, iron: 120, gold: 20 },
+    radius: 2.0,
+    zone: 3.4,
+    spot: { x: -8.2, z: 14.8 },
+    perk: 'Rendita passiva in monete',
+    effect: (s) => { s.income += 3; },
+  },
+
+  hospital: {
+    id: 'hospital',
+    name: 'Ospedale',
+    sprite: 'hospital',
+    requires: 'bank',
+    unlockCost: 2000,
+    cost: { stone: 320, iron: 150, gold: 30 },
+    radius: 2.1,
+    zone: 3.4,
+    spot: { x: 10.2, z: 14.8 },
+    perk: 'Guarisci molto più in fretta',
+    effect: (s) => { s.regenMul += 2; },
+  },
+});
+
 /** Ordine di comparsa dei cantieri. */
 export const BUILD_ORDER = [
-  'hut', 'sawmill', 'quarry', 'house', 'warehouse',   // Fase 1-2
-  'bridge', 'mill', 'smithy',                          // Fase 3
+  'hut', 'sawmill', 'quarry', 'house', 'warehouse',    // Fase 1-2
+  'bridge', 'mill', 'smithy',                           // Fase 3
+  'townhall', 'shops', 'park', 'bank', 'hospital',      // Fase 4
 ];

@@ -16,7 +16,8 @@
     "perf": "node tools/perf.cjs",
     "test:phase2": "node tools/phase2-test.cjs",
     "shots:phase2": "node tools/phase2-shots.cjs",
-    "test:phase3": "node tools/phase3-test.cjs"
+    "test:phase3": "node tools/phase3-test.cjs",
+    "test:phase4": "node tools/phase4-test.cjs"
   },
   "license": "MIT",
   "devDependencies": {
