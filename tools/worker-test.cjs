@@ -1,6 +1,7 @@
 /**
  * worker-test.cjs — Verifica dell'automazione: assunzione operai, lavoro
- * autonomo, consegna ai cantieri e persistenza nel salvataggio.
+ * autonomo, ACCUMULO al cartello (non più consegna diretta), ritiro da
+ * parte del giocatore e persistenza nel salvataggio.
  */
 
 const { chromium } = require('playwright');
@@ -36,108 +37,103 @@ const shot = (n) => `/tmp/wk-${n}.png`;
     const g = window.game;
     return Object.keys(g.workers.stations).map((id) => {
       const s = g.workers.stations[id];
-      return { id, x: +s.x.toFixed(1), z: +s.z.toFixed(1), cost: s.cost, count: s.count };
+      return { id, x: +s.x.toFixed(1), z: +s.z.toFixed(1), cost: s.cost, count: s.count, cap: s.def.stockCap };
     });
   });
   console.log('CARTELLI:', JSON.stringify(stations));
 
-  /* --- assumi un boscaiolo stando fermo lì --- */
+  /* --- assumi UN boscaiolo (un solo ciclo di carica, senza restare lì) --- */
   const lumberStation = stations.find((s) => s.id === 'lumberjack');
   await page.evaluate(([x, z]) => {
     const g = window.game;
     g.player.x = x; g.player.z = z;
     g.grid.update(g.player); g.cam.snapTo(x, z);
   }, [lumberStation.x, lumberStation.z]);
-  await page.waitForTimeout(1500);
-
-  const afterHire = await page.evaluate(() => {
-    const g = window.game;
-    return {
-      coins: g.stats.coins,
-      count: g.workers.counts.lumberjack ?? 0,
-      workerEntities: g.world.dynamic.filter((e) => e.constructor.name === 'WorkerEntity').length,
-    };
-  });
-  console.log('DOPO ASSUNZIONE BOSCAIOLO:', JSON.stringify(afterHire));
-  await page.screenshot({ path: shot('1-assunto') });
-
-  /* --- assumi anche un minatore --- */
-  const minerStation = stations.find((s) => s.id === 'miner');
-  await page.evaluate(([x, z]) => {
-    const g = window.game;
-    g.player.x = x; g.player.z = z;
-    g.grid.update(g.player); g.cam.snapTo(x, z);
-  }, [minerStation.x, minerStation.z]);
-  await page.waitForTimeout(1500);
-  console.log('DOPO ASSUNZIONE MINATORE:', JSON.stringify(await page.evaluate(() => ({
-    coins: window.game.stats.coins,
-    count: window.game.workers.counts.miner ?? 0,
-  }))));
-
-  /* --- si allontana e lascia lavorare gli operai --- */
+  await page.waitForTimeout(700);
+  // si allontana subito per non assumerne un secondo per sbaglio
   await page.evaluate(() => {
     const g = window.game;
     g.player.x = 30; g.player.z = 30;
     g.grid.update(g.player); g.cam.snapTo(30, 30);
   });
 
-  const before = await page.evaluate(() => ({
-    hutPaid: window.game.world.buildings.hut.paid,
+  const afterHire = await page.evaluate(() => ({
     coins: window.game.stats.coins,
-    treesChopped: window.game.world.dynamic.filter((e) =>
-      e.constructor.name === 'TreeEntity' && e.state !== 0).length,
+    count: window.game.workers.counts.lumberjack ?? 0,
+    workerEntities: window.game.world.dynamic.filter((e) => e.constructor.name === 'WorkerEntity').length,
   }));
-  console.log('PRIMA DI ASPETTARE:', JSON.stringify(before));
+  console.log('DOPO ASSUNZIONE (1 boscaiolo):', JSON.stringify(afterHire),
+    afterHire.count === 1 ? '✓' : '✗ atteso esattamente 1');
 
-  // capanna già completa: quindi tutto ciò che gli operai raccolgono, in
-  // assenza di altri cantieri aperti con quel tipo di risorsa, deve
-  // trasformarsi in monete da solo
-  await page.waitForTimeout(14000);
+  /* --- lascia lavorare l'operaio: deve ACCUMULARE al cartello, non vendere --- */
+  const coinsBefore = await page.evaluate(() => window.game.stats.coins);
+  await page.waitForTimeout(12000);
 
-  const after = await page.evaluate(() => {
-    const g = window.game;
-    const workers = g.world.dynamic.filter((e) => e.constructor.name === 'WorkerEntity');
-    return {
-      coins: g.stats.coins,
-      states: workers.map((w) => w.state),
-      carrying: workers.map((w) => w.carrying),
-      npcCrash: false,
-    };
-  });
-  console.log('DOPO 14s DI LAVORO AUTONOMO:', JSON.stringify(after));
-  console.log('MONETE SALITE:', after.coins > before.coins ? '✓' : '✗ (nessun guadagno passivo)');
-
-  await page.evaluate(() => {
+  const stockInfo = await page.evaluate(() => {
     const g = window.game;
     const s = g.workers.stations.lumberjack;
-    g.player.x = s.x; g.player.z = s.z;
-    g.grid.update(g.player); g.cam.snapTo(s.x, s.z);
+    return { stock: s.stock, coins: g.stats.coins, playerCarry: g.carry.total };
   });
-  await page.waitForTimeout(1000);
-  await page.screenshot({ path: shot('2-operai-al-lavoro') });
+  console.log('DOPO 12s DI LAVORO (a distanza):', JSON.stringify(stockInfo));
+  console.log('SCORTA ACCUMULATA (non venduta):', stockInfo.stock > 0 ? '✓' : '✗',
+    '| MONETE FERME (nessuna vendita automatica):', stockInfo.coins === coinsBefore ? '✓' : '✗');
 
-  /* --- un cantiere aperto: gli operai devono aiutarlo a costruirsi --- */
-  await page.evaluate(() => {
+  await page.evaluate(([x, z]) => {
     const g = window.game;
-    const b = g.world.buildings.house;
-    b.available = true; b.unlocked = true;
-  });
-  const houseBefore = await page.evaluate(() => ({ ...window.game.world.buildings.house.paid }));
-  await page.waitForTimeout(16000);
-  const houseAfter = await page.evaluate(() => ({ ...window.game.world.buildings.house.paid }));
-  console.log('CASA — prima:', JSON.stringify(houseBefore), '→ dopo:', JSON.stringify(houseAfter),
-    (houseAfter.wood > houseBefore.wood || houseAfter.stone > houseBefore.stone) ? '✓ aiutata' : '✗ ferma');
+    g.player.x = x - 2; g.player.z = z;
+    g.grid.update(g.player); g.cam.snapTo(x - 2, z);
+  }, [lumberStation.x, lumberStation.z]);
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: shot('1-magazzino-pieno-di-legno') });
 
-  /* --- salvataggio e ricarica: gli operai devono ripresentarsi --- */
+  /* --- il giocatore entra nella zona: il legno deve travasarsi nello zaino --- */
+  await page.evaluate(([x, z]) => {
+    const g = window.game;
+    g.player.x = x; g.player.z = z;
+    g.grid.update(g.player); g.cam.snapTo(x, z);
+  }, [lumberStation.x, lumberStation.z]);
+  await page.waitForTimeout(2500);
+
+  const afterCollect = await page.evaluate(() => {
+    const g = window.game;
+    const s = g.workers.stations.lumberjack;
+    return { stockRimasto: s.stock, zainoLegno: g.carry.count('wood'), zainoTotale: g.carry.total };
+  });
+  console.log('DOPO IL RITIRO:', JSON.stringify(afterCollect),
+    afterCollect.zainoLegno > 0 && afterCollect.stockRimasto < stockInfo.stock ? '✓ travasato' : '✗');
+  await page.screenshot({ path: shot('2-ritirato') });
+
+  /* --- il magazzino pieno deve far aspettare l'operaio, non buttare via nulla --- */
+  await page.evaluate(([x, z]) => {
+    const g = window.game;
+    const s = g.workers.stations.lumberjack;
+    s.stock = s.def.stockCap;   // magazzino pieno
+    g.player.x = 40; g.player.z = 40;   // il giocatore è lontano
+    g.grid.update(g.player); g.cam.snapTo(40, 40);
+  }, [lumberStation.x, lumberStation.z]);
+  await page.waitForTimeout(9000);
+  const fullState = await page.evaluate(() => {
+    const g = window.game;
+    const s = g.workers.stations.lumberjack;
+    const workers = g.world.dynamic.filter((e) => e.constructor.name === 'WorkerEntity');
+    return {
+      stock: s.stock, cap: s.def.stockCap,
+      operaiInAttesa: workers.filter((w) => w.state === 3 && w.carrying).length,
+    };
+  });
+  console.log('MAGAZZINO PIENO — operaio aspetta invece di sprecare:', JSON.stringify(fullState),
+    fullState.stock === fullState.cap ? '✓ non ha superato il limite' : '✗');
+
+  /* --- salvataggio e ricarica: la scorta deve sopravvivere --- */
   await page.evaluate(() => window.game.save());
   await page.reload();
   await page.waitForFunction(() => window.game?.loop?.running, { timeout: 120000 });
-  await page.waitForTimeout(2500);
+  await page.waitForTimeout(2000);
   console.log('DOPO RICARICA:', JSON.stringify(await page.evaluate(() => {
     const g = window.game;
     return {
       counts: g.workers.counts,
-      cartelli: Object.keys(g.workers.stations),
+      scorte: Object.fromEntries(Object.entries(g.workers.stations).map(([id, s]) => [id, s.stock])),
       operaiNelMondo: g.world.dynamic.filter((e) => e.constructor.name === 'WorkerEntity').length,
     };
   })));

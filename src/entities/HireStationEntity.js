@@ -6,9 +6,17 @@
  * (fino al massimo previsto): ogni nuovo operaio costa di più del
  * precedente, così l'automazione resta una scelta e non un unico click che
  * risolve tutto.
+ *
+ * Il cartello è anche il MAGAZZINO dell'operaio: ciò che raccoglie si
+ * accumula qui (fino a `stockCap`) finché il giocatore non passa a
+ * ritirarlo — proprio come se lo caricasse sulle proprie spalle. Da qui in
+ * poi la consegna a un cantiere o al mercante è di nuovo compito del
+ * giocatore: l'operaio raccoglie, non consegna.
  */
 
 import { Entity } from './Entity.js';
+import { RESOURCE_INFO } from '../data/buildings.js';
+import { CFG } from '../data/config.js';
 import { drawPanel, drawRing } from '../ui/WorldUI.js';
 import { clamp, damp } from '../core/MathUtils.js';
 
@@ -31,11 +39,16 @@ export class HireStationEntity extends Entity {
     this.panelT = 0;
     this.pulse = 0;
     this.playerInside = false;
+
+    /** Risorsa già raccolta e in attesa che il giocatore la ritiri. */
+    this.stock = 0;
+    this.collectTimer = 0;
   }
 
   get count() { return this.workers.counts[this.def.id] ?? 0; }
   get maxed() { return this.count >= this.def.maxWorkers; }
   get cost() { return Math.round(this.def.hireCost * (this.def.costGrowth ** this.count)); }
+  get stockFull() { return this.stock >= this.def.stockCap; }
 
   update(dt, game) {
     this.pulse = damp(this.pulse, 0, 7, dt);
@@ -47,6 +60,8 @@ export class HireStationEntity extends Entity {
 
     if (inside && !this.playerInside) game.bus.emit('zone:enter', this);
     this.playerInside = inside;
+
+    if (inside) this._collect(dt, game);
 
     if (this.maxed) { this.charge = 0; return; }
 
@@ -62,6 +77,34 @@ export class HireStationEntity extends Entity {
     } else {
       this.charge = damp(this.charge, 0, 8, dt);
     }
+  }
+
+  /**
+   * Il giocatore ritira, a raffica, ciò che l'operaio ha accumulato — la
+   * stessa "cadenza" con cui i tronchi partono verso un cantiere, solo al
+   * contrario: qui è il cartello a caricare lo zaino del giocatore.
+   */
+  _collect(dt, game) {
+    if (this.stock <= 0) return;
+    this.collectTimer -= dt;
+    if (this.collectTimer > 0) return;
+    if (game.carry.isFull) return;
+
+    this.collectTimer = CFG.deliver.interval;
+    this.stock--;
+    const idx = game.carry.total;
+    const type = this.def.resource;
+
+    game.delivery.send(type, this.x, 1, this.z, {
+      get x() { return game.player.x; },
+      get z() { return game.player.z; },
+      deliverY: 1.1,
+    }, () => {
+      game.carry.add(type, 1);
+      game.audio.pop(idx % 12);
+      game.haptics.fire('light', 20);
+      game.player.bumpStack();
+    }, idx);
   }
 
   _hire(game) {
@@ -95,6 +138,20 @@ export class HireStationEntity extends Entity {
 
   drawUI(ctx, cam, dpr, game) {
     if (this.panelT < 0.02) return;
+    const info = RESOURCE_INFO[this.def.resource];
+
+    // Il magazzino dell'operaio: quando c'è qualcosa pronto, è il pannello
+    // più in alto, così è la prima cosa che si legge avvicinandosi.
+    if (this.stock > 0) {
+      drawPanel(ctx, cam, dpr, this.x, 2.55, this.z, {
+        title: this.stockFull
+          ? `${info.icon} Magazzino pieno — vieni a ritirare!`
+          : `${info.icon} ${this.stock} pronti — avvicinati per ritirarli`,
+        appear: this.panelT,
+        width: 220,
+        titleColor: this.stockFull ? '#ffce54' : info.color,
+      });
+    }
 
     if (this.maxed) {
       drawPanel(ctx, cam, dpr, this.x, 1.85, this.z, {

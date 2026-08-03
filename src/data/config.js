@@ -120,8 +120,8 @@ export const CFG = {
 
   /* ------------------------------------------------------------- villaggio */
   village: {
-    fenceRadius: 8.6,     // raggio della staccionata perimetrale
-    fenceSegments: 44,
+    // La staccionata è un quadrato: questo è il semilato, non un raggio.
+    fenceRadius: 8.6,
     safeRadius: 10,       // dentro questo raggio i nemici non compaiono
   },
 

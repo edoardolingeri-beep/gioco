@@ -110,9 +110,11 @@ stata rifinita fino in fondo prima di proseguire:
 | **Boscaiolo** e **Minatore**: si assumono pagando alla segheria/cava | ✅ |
 | Lavorano da soli — cercano un albero/masso, lo abbattono, tornano | ✅ |
 | Si possono assumere fino a 3 operai per mestiere, ognuno costa di più | ✅ |
-| Quel che raccolgono aiuta prima i cantieri aperti, poi si vende da sé | ✅ |
-| **Staccionata** ridisegnata: zoccolo di pietra, pali più solidi | ✅ |
-| **Varchi automatici** (3, distribuiti sul perimetro): si aprono da soli quando ti avvicini, si richiudono quando te ne vai | ✅ |
+| Accumulano al cartello (fino a un limite): il giocatore passa a ritirare | ✅ |
+| Se il magazzino è pieno l'operaio aspetta lì, carico, senza sprecare nulla | ✅ |
+| **Staccionata** ridisegnata: un quadrato, non un cerchio — linee dritte | ✅ |
+| **Varchi automatici** (uno per lato): si aprono da soli quando ti avvicini | ✅ |
+| Ogni varco ha un sentiero di terra e due lanterne: si vede subito dov'è | ✅ |
 
 Il percorso completo va dalla prima capanna nella radura alla capitale con
 l'aeroporto: cinque fasi, ognuna che trasforma il mondo sotto gli occhi di chi
@@ -425,11 +427,13 @@ Il tempo lo tiene la timeline dell'AudioContext, non il game loop: le note
 vengono programmate con 0,7 secondi di anticipo, quindi restano a tempo anche
 se il frame rate balla.
 
-### Gli operai non passano dallo zaino del giocatore
+### Un operaio accumula, non consegna
 
-Un operaio non usa il ciclo raccolta→zaino→consegna del giocatore: sarebbe
-stato o troppo lento (aspettare che cammini avanti e indietro come un NPC) o
-troppo invisibile (numeri che cambiano senza che nulla si veda). Invece:
+La prima versione faceva consegnare il raccolto direttamente ai cantieri (o
+lo vendeva se non serviva a nessuno): comodo, ma toglieva al giocatore
+l'unica cosa che rende soddisfacente ogni altra raccolta nel gioco — vedere
+lo zaino riempirsi e portarlo da qualche parte con le proprie gambe. Ora
+l'operaio si ferma un passo prima:
 
 1. cerca l'albero o il masso raccoglibile più vicino al suo cartello;
 2. ci cammina vicino e "lavora" per qualche secondo, con gli stessi chip e
@@ -438,17 +442,34 @@ troppo invisibile (numeri che cambiano senza che nulla si veda). Invece:
    `TreeEntity.fell`/`RockEntity.shatter` accettano un flag che salta la
    generazione dei tronchi a terra, perché l'operaio se li porta già "in
    spalla" — e torna al cartello;
-4. lì consegna: prima aiuta il primo cantiere aperto che ha ancora bisogno
-   di quel tipo di risorsa (`BuildingEntity._receive`, la stessa funzione
-   usata per le consegne del giocatore), altrimenti si vende da sé, come al
-   mercante. Un operaio non lavora mai a vuoto.
+4. lì deposita nel **magazzino del cartello** (`HireStationEntity.stock`,
+   fino a un tetto). Se il giocatore non è passato da un po' e il magazzino
+   è pieno, l'operaio resta fermo lì con il carico ancora in spalla —
+   nessuno spreco, ma il messaggio è chiaro: serve una visita.
 
-### Un recinto che si apre da solo
+Il giocatore, entrando nella zona del cartello, si vede travasare la scorta
+nello zaino a raffica — la stessa cadenza (`CFG.deliver.interval`) e lo
+stesso volo con `DeliverySystem` usati per ogni altra consegna — e da lì in
+poi la risorsa è sua, da portare a un cantiere o al mercante come se
+l'avesse raccolta a mano. Un nastro trasportatore, in una fase successiva
+del gioco, è il candidato naturale per automatizzare anche quest'ultimo
+tratto: la struttura è già pronta, semplicemente non esiste ancora.
 
-La staccionata era un anello con un varco fisso, sempre aperto: da vicino
-sembrava un buco nella recinzione, non un ingresso. Ora è un anello chiuso —
-mai un buco visibile — con alcuni tratti, quelli sotto i cancelletti, che
-sono entità a parte (`FenceGateEntity`): sprofondano nel terreno quando il
+### Un recinto quadrato, non un cerchio
+
+La prima versione era un anello di 44 tratti, ognuno orientato con la sprite
+cotta più vicina fra le 12 disponibili (`FENCE_DIRS`): con un angolo ogni
+30°, l'errore di arrotondamento si vedeva — il recinto sembrava storto e
+spezzato invece che una linea pulita. Un quadrato non ha questo problema: i
+quattro lati sono perfettamente orizzontali o verticali, cioè esattamente
+due dei dodici orientamenti già cotti — zero arrotondamento, zero errore,
+qualunque sia la lunghezza del lato. I segmenti si sovrappongono leggermente
+fra loro, così non si vede mai una fessura.
+
+Un varco per lato, sempre nello stesso punto e ben marcato — arco, sentiero
+di terra battuta e due lanterne che di notte lo rendono il punto più
+luminoso del perimetro — si apre da solo: i tratti sotto il cancelletto sono
+entità a parte (`FenceGateEntity`) che sprofondano nel terreno quando il
 giocatore entra nel loro raggio e risalgono quando se ne va, ridiventando
 solidi solo a metà chiusura per non respingerlo mentre sta ancora passando.
 Nessuna sprite di un cancello che si apre — il motore non anima mesh dal
@@ -471,6 +492,9 @@ Le cinque fasi previste sono completate. Gli sviluppi naturali da qui:
   lupo: chi ruba e scappa, chi attacca in gruppo.
 - **Porto e navi**, sfruttando il sistema di percorsi già usato per il tram.
 - **Meteo**: pioggia e neve, con lo stesso schema a veli usato dalla notte.
+- **Nastri trasportatori**: una costruzione che automatizzi il tratto finale
+  del lavoro degli operai — dal magazzino del cartello al cantiere o al
+  mercante — senza che il giocatore debba più portarlo a mano.
 
 Il motore dell'evoluzione è già in funzione: `VillageSystem` tiene un livello
 che sale a ogni costruzione completata, e ogni livello elenca in `STAGES` gli

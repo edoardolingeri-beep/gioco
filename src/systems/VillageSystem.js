@@ -22,10 +22,9 @@ import { FENCE_DIRS } from '../render/AssetForge.js';
 import { fxRand } from '../core/Rand.js';
 import { TAU } from '../core/MathUtils.js';
 
-/** Quanti varchi automatici ha la staccionata, distribuiti sul perimetro. */
-const GATE_COUNT = 3;
-/** Ampiezza angolare di ciascun varco (quanti tratti diventano cancelli). */
-const GATE_HALF_WIDTH = 0.16;
+/** Quanti tratti, a cavallo del centro di ogni lato, diventano cancelli
+ *  automatici (distanza in unità di mondo dal centro del varco). */
+const GATE_HALF_WIDTH = 0.75;
 
 /**
  * Cosa compare a ogni livello del villaggio.
@@ -301,6 +300,8 @@ export class VillageSystem {
     this.stageName = 'Radura';
     /** Segmenti della staccionata: la città li smonterà. */
     this.fenceProps = [];
+    /** Lanterne alle porte: rimosse insieme alla staccionata. */
+    this.fenceLights = [];
   }
 
   get maxLevel() { return STAGES.length; }
@@ -394,71 +395,88 @@ export class VillageSystem {
   }
 
   /**
-   * Staccionata perimetrale, un anello chiuso senza buchi permanenti.
+   * Staccionata perimetrale: un QUADRATO, non un cerchio.
    *
-   * Alcuni tratti — quelli sotto i cancelletti decorativi, distribuiti sul
-   * perimetro — sono `FenceGateEntity`: sprofondano da soli quando ti
-   * avvicini e risalgono quando te ne vai. Da lontano il recinto sembra
-   * intero e serio; da vicino, dove serve, si apre senza che tu debba fare
-   * nulla.
+   * Le sprite dei segmenti sono cotte in un numero fisso di orientamenti
+   * (`FENCE_DIRS`): su un cerchio ogni tratto deve arrotondare alla
+   * direzione cotta più vicina, e con soli 12 angoli disponibili l'errore si
+   * vede — il recinto sembra storto e spezzato invece che una linea pulita.
+   * Un quadrato non ha questo problema: i quattro lati sono perfettamente
+   * orizzontali o verticali, cioè esattamente due degli orientamenti già
+   * cotti (nessun arrotondamento, nessun errore).
+   *
+   * Alcuni tratti, al centro di ogni lato, sono `FenceGateEntity`: sprofondano
+   * da soli quando ti avvicini e risalgono quando te ne vai. Per farli
+   * riconoscere subito ci sono un arco, un sentiero di terra battuta e due
+   * lanterne — di notte i varchi sono i punti più illuminati del recinto.
    */
   _buildFenceRing(instant) {
     const g = this.game;
-    const R = CFG.village.fenceRadius;
-    const n = CFG.village.fenceSegments;
+    const H = CFG.village.fenceRadius;     // ora è il semilato del quadrato
     const fences = g.assets.village.fences;
     const gate = g.assets.village.gate;
     if (!fences) return;
 
-    // I varchi sono distribuiti a intervalli regolari, il primo nella
-    // stessa direzione di sempre (verso il bosco) per continuità.
-    const gateAngles = [];
-    for (let k = 0; k < GATE_COUNT; k++) {
-      gateAngles.push(Math.PI * 0.25 + (k / GATE_COUNT) * TAU);
+    const H_IDX = 0;                  // orientamento orizzontale, esatto
+    const V_IDX = FENCE_DIRS / 2;      // orientamento verticale, esatto
+
+    // I quattro lati: per ognuno, l'asse che percorriamo, il valore fisso
+    // dell'altro asse, l'orientamento della sprite e dove si apre il varco.
+    const sides = [
+      { along: 'x', fixed: -H, dir: H_IDX, gx: 0, gz: -H },   // nord
+      { along: 'x', fixed: H, dir: H_IDX, gx: 0, gz: H },     // sud
+      { along: 'z', fixed: -H, dir: V_IDX, gx: -H, gz: 0 },   // ovest
+      { along: 'z', fixed: H, dir: V_IDX, gx: H, gz: 0 },      // est
+    ];
+
+    // Passo leggermente più corto della larghezza reale del segmento: i pali
+    // si sovrappongono un po' invece di lasciare fessure fra un tratto e
+    // l'altro.
+    const step = 1.28;
+    const n = Math.max(2, Math.round((2 * H) / step));
+    let delayIdx = 0;
+
+    for (const side of sides) {
+      const sprite = fences[side.dir];
+      for (let i = 0; i <= n; i++) {
+        const t = -H + (i / n) * (2 * H);
+        const x = side.along === 'x' ? t : side.fixed;
+        const z = side.along === 'x' ? side.fixed : t;
+
+        const dGate = Math.hypot(x - side.gx, z - side.gz);
+        if (dGate < GATE_HALF_WIDTH) {
+          const seg = new FenceGateEntity(x, z, side.gx, side.gz, sprite, { radius: 0.6, shadow: 0.34 });
+          g.world.add(seg, true);
+          this.fenceProps.push(seg);
+          continue;
+        }
+
+        const prop = new GrowProp(x, z, sprite, {
+          solid: true, radius: 0.6, shadow: 0.34,
+          delay: instant ? 0 : 0.3 + delayIdx * 0.025,
+          instant, silent: instant,
+        });
+        g.world.add(prop, !instant);
+        this.fenceProps.push(prop);
+        delayIdx++;
+      }
     }
 
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * TAU;
-      const x = Math.cos(a) * R;
-      const z = Math.sin(a) * R;
-
-      // Ogni segmento è TANGENTE al cerchio: scegliamo la sprite già cotta
-      // nell'orientamento più vicino a quello richiesto.
-      const tangent = a + Math.PI / 2;
-      const idx = ((Math.round((tangent / Math.PI) * FENCE_DIRS) % FENCE_DIRS) + FENCE_DIRS) % FENCE_DIRS;
-
-      // Il tratto più vicino a un varco diventa un cancello automatico.
-      let nearestGate = null, nearestD = Infinity;
-      for (const ga of gateAngles) {
-        const d = Math.abs(((a - ga + Math.PI) % TAU) - Math.PI);
-        if (d < nearestD) { nearestD = d; nearestGate = ga; }
-      }
-
-      if (nearestD < GATE_HALF_WIDTH) {
-        const gx = Math.cos(nearestGate) * R, gz = Math.sin(nearestGate) * R;
-        const seg = new FenceGateEntity(x, z, gx, gz, fences[idx], { radius: 0.6, shadow: 0.34 });
-        g.world.add(seg, true);
-        this.fenceProps.push(seg);
-        continue;
-      }
-
-      const prop = new GrowProp(x, z, fences[idx], {
-        solid: true, radius: 0.6, shadow: 0.34,
-        delay: instant ? 0 : 0.3 + i * 0.04,
-        instant, silent: instant,
-      });
-      g.world.add(prop, !instant);
-      this.fenceProps.push(prop);
-    }
-
-    // I cancelletti veri e propri: uno per varco, segnano dove il recinto si apre.
+    // Le porte vere e proprie: arco, sentiero di terra e due lanterne, così
+    // un varco si riconosce subito anche da lontano — di giorno per il
+    // sentiero, di notte per la luce.
     if (gate) {
-      for (const ga of gateAngles) {
-        const gx = Math.cos(ga) * R, gz = Math.sin(ga) * R;
+      for (const side of sides) {
+        const { gx, gz } = side;
         this.fenceProps.push(g.world.add(new GrowProp(gx, gz, gate, {
           solid: false, radius: 0.9, shadow: 0.5,
           delay: instant ? 0 : 1.2, instant, silent: instant,
         }), !instant));
+
+        g.world.terrain.addDecal(gx * 1.06, gz * 1.06, 1.7, PAL.dirt, 0.42);
+        this.fenceLights.push(g.world.addLight(gx * 0.9, 1.55, gz * 0.9, {
+          radius: 2.3, alpha: 0.62, flicker: true,
+        }));
       }
     }
   }
@@ -507,6 +525,10 @@ export class VillageSystem {
       g.fx.puff(p.x, 0.05, p.z, 3, 'rgba(206,190,160,0.8)', 0.5, 0.2);
     }
     this.fenceProps.length = 0;
+    // Le lanterne delle porte se ne vanno con loro: restare accese senza
+    // nessun palo sotto sembrerebbe un errore, non un'atmosfera.
+    for (const L of this.fenceLights) g.world.removeLight(L);
+    this.fenceLights.length = 0;
     if (!instant) {
       g.hud.toast('La città ha superato il vecchio recinto 🏙️');
       g.cam.addShake(0.15);

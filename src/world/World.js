@@ -65,6 +65,12 @@ export class World {
     return L;
   }
 
+  /** Toglie una luce statica (usato quando la staccionata viene smontata). */
+  removeLight(L) {
+    const i = this.lights.indexOf(L);
+    if (i >= 0) this.lights.splice(i, 1);
+  }
+
   /** Aggiorna le luci agganciate a un'entità (fari, lanterne portate). */
   syncLights() {
     for (let i = this.lights.length - 1; i >= 0; i--) {

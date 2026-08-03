@@ -4,12 +4,15 @@
  * Routine, in un ciclo continuo:
  *   CERCA ──▶ VAI (verso l'albero/masso più vicino) ──▶ LAVORA (colpisce
  *   sul posto, riusando gli stessi effetti del giocatore) ──▶ TORNA (al
- *   cartello che l'ha assunto) ──▶ CONSEGNA ──▶ CERCA…
+ *   cartello che l'ha assunto) ──▶ ACCUMULA ──▶ CERCA…
  *
- * Non passa mai dallo zaino del giocatore: l'albero/masso cade o si
- * frantuma "in silenzio" (nessun tronco a terra da raccogliere fisicamente,
- * vedi `TreeEntity.fell`/`RockEntity.shatter`) e la risorsa arriva già
- * "in spalla" all'operaio, che la consegna lui stesso al ritorno.
+ * Non passa mai dallo zaino del giocatore, ma non consegna nemmeno da solo:
+ * l'albero/masso cade o si frantuma "in silenzio" (nessun tronco a terra da
+ * raccogliere fisicamente, vedi `TreeEntity.fell`/`RockEntity.shatter`) e la
+ * risorsa arriva già "in spalla" all'operaio, che la deposita nel magazzino
+ * del cartello — tocca al giocatore passare a ritirarla e portarla a
+ * destinazione. Se il magazzino è pieno, l'operaio aspetta lì con il carico
+ * ancora in spalla finché non c'è di nuovo posto.
  */
 
 import { Entity } from './Entity.js';
@@ -24,14 +27,16 @@ const NPC_LOOKS_COUNT = 3;   // quante varianti di vestiario esistono per gli NP
 
 export class WorkerEntity extends Entity {
   /**
-   * @param {number} x @param {number} z posizione del cartello che lo ha assunto
-   * @param {object} def voce di data/workers.js
+   * @param {import('./HireStationEntity.js').HireStationEntity} station
+   *   il cartello che lo ha assunto: è anche la sua "casa" e il magazzino
+   *   in cui deposita.
    */
-  constructor(x, z, def, game) {
-    super(x, z);
+  constructor(station, game) {
+    super(station.x, station.z);
     this.game = game;
-    this.def = def;
-    this.homeX = x; this.homeZ = z;
+    this.station = station;
+    this.def = station.def;
+    this.homeX = station.x; this.homeZ = station.z;
     this.static = false;
     this.radius = 0.3;
     this.solid = false;
@@ -175,6 +180,14 @@ export class WorkerEntity extends Entity {
     const d = dist(this.x, this.z, this.homeX, this.homeZ);
     if (d < 0.6) {
       this.vx = 0; this.vz = 0;
+      if (this.station.stockFull) {
+        // Il magazzino è pieno: aspetta lì, carico in spalla, finché il
+        // giocatore non passa a ritirare — non lo butta e non lo vende da
+        // solo, così si vede subito che serve una visita.
+        this.workPhase += dt * 2;
+        this.bob = Math.sin(this.workPhase) * 0.025;
+        return;
+      }
       this._deposit(game);
       this.state = STATE.SEEK;
       this.seekCooldown = 0.15;
@@ -187,10 +200,10 @@ export class WorkerEntity extends Entity {
   }
 
   _deposit(game) {
-    const type = this.carrying;
     this.carrying = null;
+    this.station.stock = Math.min(this.station.def.stockCap, this.station.stock + 1);
     game.fx.sparks(this.x, 1.1, this.z, 5, 'rgba(255,236,180,1)', 0.55);
-    game.workers.deliver(type, this.x, this.z);
+    game.audio.plant();
   }
 
   /** Vero se il bersaglio esiste ancora ed è ancora raccoglibile. */

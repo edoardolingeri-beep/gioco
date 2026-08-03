@@ -478,6 +478,7 @@ export class Game {
         dayTime: this.dayNight.time,
         traffic: { roads: this.traffic.enabled, tram: this.traffic.tramEnabled },
         workers: this.workers.counts,
+        workersStock: this.workers.stockSnapshot(),
         buildings,
         player: { x: this.player.x, z: this.player.z },
         carry: this.carry.stack.map((s) => s.type),
@@ -519,10 +520,11 @@ export class Game {
     const w = this.world;
     w.workbench.index = data.upgradeIndex ?? 0;
 
-    // Quanti operai erano stati assunti: va fatto PRIMA del ciclo qui sotto,
-    // perché `registerStation` (chiamato da `onRestore`) li rimette al
-    // lavoro subito se il conteggio è già a posto.
+    // Quanti operai erano stati assunti, e quanto avevano già accumulato: va
+    // fatto PRIMA del ciclo qui sotto, perché `registerStation` (chiamato da
+    // `onRestore`) li rimette al lavoro subito e applica la scorta salvata.
     if (data.workers) Object.assign(this.workers.counts, data.workers);
+    if (data.workersStock) this.workers.pendingStock = data.workersStock;
 
     // stato dei cantieri
     const saved = data.buildings ?? (data.hut ? { hut: data.hut } : {});
