@@ -151,9 +151,9 @@ export const CFG = {
   /* ---------------------------------------------------------------- nemici */
   enemies: {
     firstWaveDelay: 25,
-    spawnInterval: [14, 26],
-    baseMax: 2,
-    maxTotal: 7,
+    spawnInterval: [10, 19],
+    baseMax: 3,
+    maxTotal: 10,
     minSpawnDist: 9,
     maxSpawnDist: 22,
     wolf: {
@@ -169,6 +169,32 @@ export const CFG = {
       stealChance: 0.35,
       reward: 4,          // monete per ogni lupo abbattuto
     },
+    // L'orso compare più tardi (bearMinLevel) ed è un pericolo diverso dal
+    // lupo: più lento, ma molto più tosto — tanta vita, un colpo pesante e
+    // telegrafato (l'attacco dura di più: c'è tempo per scansarlo), e vale
+    // molte più monete se abbattuto.
+    bear: {
+      hp: 90,
+      speed: 2.6,
+      damage: 18,
+      aggroRange: 6,
+      leashRange: 13,
+      attackRange: 1.5,
+      attackTime: 0.75,
+      attackCooldown: 1.6,
+      wanderRadius: 5,
+      stealChance: 0.5,
+      reward: 14,
+    },
+    bearMinLevel: 3,      // il villaggio deve essere già "Villaggio" prima che appaiano
+    bearChance: 0.28,     // probabilità che un'ondata generi un orso invece di un lupo
+  },
+
+  /** La torretta di guardia (data/buildings.js: guardTower). */
+  tower: {
+    range: 9,
+    damage: 14,
+    interval: 1.3,
   },
 
   /* ----------------------------------------------------------------- mondo */

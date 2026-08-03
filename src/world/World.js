@@ -17,11 +17,18 @@ import { River } from './River.js';
 import { StaticProp } from '../entities/Entity.js';
 import { TreeEntity } from '../entities/TreeEntity.js';
 import { BuildingEntity } from '../entities/BuildingEntity.js';
+import { TowerEntity } from '../entities/TowerEntity.js';
 import { MerchantEntity } from '../entities/MerchantEntity.js';
 import { WorkbenchEntity } from '../entities/WorkbenchEntity.js';
 import { RockEntity } from '../entities/RockEntity.js';
 import { BUILDINGS, BUILD_ORDER } from '../data/buildings.js';
 import { PAL } from '../data/palette.js';
+
+/** Edifici che si comportano diversamente dal cantiere generico una volta
+ *  finiti (per ora solo la torretta, che continua a "vivere" per
+ *  difendersi da sola): id → classe da istanziare al posto di
+ *  `BuildingEntity`. */
+const ENTITY_OVERRIDES = { guardTower: TowerEntity };
 
 export class World {
   constructor(game) {
@@ -274,7 +281,8 @@ export class World {
       const def = BUILDINGS[id];
       // Il ponte si aggancia al corso del fiume, che serpeggia.
       const z = def.onRiver ? this.river.centerAt(def.spot.x) : def.spot.z;
-      const b = new BuildingEntity(def.spot.x, z, def, this.game);
+      const Ctor = ENTITY_OVERRIDES[id] ?? BuildingEntity;
+      const b = new Ctor(def.spot.x, z, def, this.game);
       this.buildings[id] = this.add(b, true);
     }
     this.hut = this.buildings.hut;

@@ -26,6 +26,7 @@ import { Haptics } from '../systems/Haptics.js';
 import { QualityManager } from '../systems/QualityManager.js';
 import { VillageSystem } from '../systems/VillageSystem.js';
 import { EnemySpawner } from '../systems/EnemySpawner.js';
+import { BearEntity } from '../entities/BearEntity.js';
 import { TrafficSystem } from '../systems/TrafficSystem.js';
 import { WorkerSystem } from '../systems/WorkerSystem.js';
 import { DayNightSystem } from '../systems/DayNightSystem.js';
@@ -82,7 +83,7 @@ export class Game {
       sellBonus: 1, income: 0, regenMul: 1,
       // contatori
       treesChopped: 0, rocksMined: 0, ironMined: 0, goldMined: 0,
-      wolvesKilled: 0, upgradeIndex: 0,
+      wolvesKilled: 0, bearsKilled: 0, upgradeIndex: 0,
       // quante volte il fumetto "serve il piccone" è già comparso, per tipo
       // di risorsa: dopo le prime volte si fa vedere solo se ti fermi lì
       rockHintsSeen: {},
@@ -166,8 +167,9 @@ export class Game {
     this.bus.on('village:level', () => this.music.setPhase(this.village.phase));
 
     this.bus.on('enemy:killed', (e) => {
-      const reward = CFG.enemies.wolf.reward;
-      this.stats.wolvesKilled++;
+      const isBear = e instanceof BearEntity;
+      const reward = isBear ? CFG.enemies.bear.reward : CFG.enemies.wolf.reward;
+      if (isBear) this.stats.bearsKilled++; else this.stats.wolvesKilled++;
       this.addCoins(reward, e.x, 1.2, e.z);
       this.audio.coin(0);
     });
@@ -474,6 +476,7 @@ export class Game {
         ironMined: this.stats.ironMined,
         goldMined: this.stats.goldMined,
         wolvesKilled: this.stats.wolvesKilled,
+        bearsKilled: this.stats.bearsKilled,
         villageLevel: this.village.level,
         dayTime: this.dayNight.time,
         traffic: { roads: this.traffic.enabled, tram: this.traffic.tramEnabled },
@@ -516,6 +519,7 @@ export class Game {
     s.ironMined = data.ironMined ?? 0;
     s.goldMined = data.goldMined ?? 0;
     s.wolvesKilled = data.wolvesKilled ?? 0;
+    s.bearsKilled = data.bearsKilled ?? 0;
     this.recomputeStats();
 
     const w = this.world;

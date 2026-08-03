@@ -19,7 +19,7 @@ import * as Town from '../models/town.js';
 import * as City from '../models/city.js';
 import * as Metro from '../models/metro.js';
 import { buildCharacter, buildCarriedLog, CHAR, TOOL } from '../models/character.js';
-import { buildWolf, buildAlertMark, ENEMY } from '../models/enemies.js';
+import { buildWolf, buildBear, buildAlertMark, ENEMY } from '../models/enemies.js';
 import { rotY as rotateMeshY } from './Mesh.js';
 
 /**
@@ -235,6 +235,12 @@ export class AssetForge {
       this._job(() => this._bakeWolfDir(A.wolf, d));
     }
 
+    /* -------------------------------------------------------------- orsi */
+    this._job(() => { A.bear = this._newWolfAtlas(); });
+    for (let d = 0; d < ENEMY.dirs; d++) {
+      this._job(() => this._bakeBearDir(A.bear, d));
+    }
+
     /* ---------------------------------------------------------- abitanti */
     for (let v = 0; v < NPC_LOOKS.length; v++) {
       this._job(() => { A.npc[v] = this._newNPCAtlas(); });
@@ -265,6 +271,7 @@ export class AssetForge {
       ['quarry', Village.buildQuarry],
       ['house', Village.buildHouse],
       ['warehouse', Village.buildWarehouse],
+      ['guardTower', Village.buildGuardTower],
     ];
     for (const [id, fn] of phase2) {
       this._job(() => {
@@ -439,6 +446,27 @@ export class AssetForge {
     atlas.walk[d] = walk;
     atlas.attack[d] = attack;
     atlas.idle[d] = bakeMesh(buildWolf({ yaw, action: 'idle', t: 0 }), { outline: 1.5 });
+  }
+
+  /* -------------------------------------------------------- atlante orso */
+
+  _bakeBearDir(atlas, d) {
+    const yaw = (d / ENEMY.dirs) * Math.PI * 2;
+    const walk = [];
+    for (let f = 0; f < ENEMY.walkFrames; f++) {
+      walk.push(bakeMesh(buildBear({ yaw, action: 'walk', t: f / ENEMY.walkFrames }),
+        { outline: 1.6 }));
+    }
+    const attack = [];
+    for (let f = 0; f < ENEMY.attackFrames; f++) {
+      attack.push(bakeMesh(
+        buildBear({ yaw, action: 'attack', t: f / (ENEMY.attackFrames - 1) }),
+        { outline: 1.6 },
+      ));
+    }
+    atlas.walk[d] = walk;
+    atlas.attack[d] = attack;
+    atlas.idle[d] = bakeMesh(buildBear({ yaw, action: 'idle', t: 0 }), { outline: 1.6 });
   }
 
   /* ---------------------------------------------------- atlante abitanti */

@@ -11,6 +11,7 @@
 
 import { CFG } from '../data/config.js';
 import { WolfEntity } from '../entities/WolfEntity.js';
+import { BearEntity } from '../entities/BearEntity.js';
 import { fxRand } from '../core/Rand.js';
 import { TAU, dist } from '../core/MathUtils.js';
 
@@ -51,10 +52,18 @@ export class EnemySpawner {
     const spot = this._findSpot(game);
     if (!spot) return;
 
-    const w = new WolfEntity(spot[0], spot[1], game);
-    game.world.add(w, true);
-    this.enemies.push(w);
-    game.bus.emit('enemy:spawned', w);
+    // L'orso compare solo dopo che il villaggio è un po' cresciuto, e anche
+    // allora resta l'eccezione: la maggior parte delle ondate è comunque
+    // di lupi.
+    const C = CFG.enemies;
+    const canBear = this.game.village.level >= C.bearMinLevel;
+    const e = (canBear && fxRand.chance(C.bearChance))
+      ? new BearEntity(spot[0], spot[1], game)
+      : new WolfEntity(spot[0], spot[1], game);
+
+    game.world.add(e, true);
+    this.enemies.push(e);
+    game.bus.emit('enemy:spawned', e);
   }
 
   /** Cerca un punto valido: nel bosco, lontano dal giocatore e dal villaggio. */

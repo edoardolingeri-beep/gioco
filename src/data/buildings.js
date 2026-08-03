@@ -92,6 +92,25 @@ export const BUILDINGS = {
     perk: '+6 di capienza',
     effect: (s) => { s.warehouseBonus += 6; },
   },
+
+  /**
+   * Torretta di guardia: la prima difesa vera del villaggio. A differenza
+   * di ogni altro cantiere, non si "spegne" quando finisce di salire —
+   * vedi `World.js` (ENTITY_OVERRIDES) e `TowerEntity`, che la tengono
+   * viva per colpire da sola lupi e orsi che si avvicinano troppo.
+   */
+  guardTower: {
+    id: 'guardTower',
+    name: 'Torretta di guardia',
+    sprite: 'guardTower',
+    requires: 'house',
+    unlockCost: 260,
+    cost: { wood: 140, stone: 70 },
+    radius: 1.05,
+    zone: 2.6,
+    spot: { x: -7.6, z: -7.2 },
+    perk: 'Colpisce da sola lupi e orsi nel raggio',
+  },
 };
 
 /* ------------------------------------------------------------- Fase 3 */
@@ -358,7 +377,7 @@ Object.assign(BUILDINGS, {
 
 /** Ordine di comparsa dei cantieri. */
 export const BUILD_ORDER = [
-  'hut', 'sawmill', 'quarry', 'house', 'warehouse',    // Fase 1-2
+  'hut', 'sawmill', 'quarry', 'house', 'warehouse', 'guardTower', // Fase 1-2
   'bridge', 'mill', 'smithy',                           // Fase 3
   'townhall', 'shops', 'park', 'bank', 'hospital',      // Fase 4
   'tower', 'station', 'tower2', 'factory', 'airport',   // Fase 5

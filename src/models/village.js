@@ -357,6 +357,66 @@ export function buildWell() {
   return { mesh: g, height: 1.9, radius: 0.62 };
 }
 
+/**
+ * Torretta di guardia: quattro trampoli, una piattaforma con parapetto e
+ * una balestra fissa puntata verso il bosco. Alta apposta — deve leggersi
+ * da lontano come "qui c'è difesa", diversamente da un arredo qualsiasi.
+ */
+export function buildGuardTower() {
+  const g = M.mesh();
+  const legY = 1.15;
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      const leg = M.box(0.14, legY * 2, 0.14, PAL.fenceDark, { taper: 0.15 });
+      M.translate(leg, sx * 0.55, legY, sz * 0.55);
+      M.merge(g, leg);
+    }
+  }
+  // controventi a X, giusto per non farla sembrare un tavolo su trampoli
+  for (const sx of [-1, 1]) {
+    const brace = M.box(0.07, 1.5, 0.07, PAL.fence);
+    M.rotZ(brace, sx * 0.62);
+    M.translate(brace, 0, legY * 0.75, sx * 0.55);
+    M.merge(g, brace);
+  }
+
+  const platform = M.box(1.5, 0.12, 1.5, PAL.plank);
+  M.translate(platform, 0, legY * 2, 0);
+  M.merge(g, platform);
+
+  // parapetto: quattro assi basse invece di pareti piene, per non nascondere
+  // chi c'è sopra (nessuno, per ora, ma la sagoma resta leggibile)
+  const railY = legY * 2 + 0.32;
+  for (const sz of [-1, 1]) {
+    const rail = M.box(1.5, 0.42, 0.08, PAL.fenceDark);
+    M.translate(rail, 0, railY, sz * 0.71);
+    M.merge(g, rail);
+  }
+  for (const sx of [-1, 1]) {
+    const rail = M.box(0.08, 0.42, 1.5, PAL.fenceDark);
+    M.translate(rail, sx * 0.71, railY, 0);
+    M.merge(g, rail);
+  }
+
+  // tettuccio a punta
+  const roof = M.cone(1.15, 0.75, 4, PAL.roofWood);
+  M.translate(roof, 0, legY * 2 + 0.9, 0);
+  M.merge(g, roof);
+
+  // balestra: il dettaglio che dice "questa torre spara"
+  const mount = M.box(0.16, 0.16, 0.5, PAL.bark);
+  M.translate(mount, 0, railY + 0.14, 0.3);
+  M.merge(g, mount);
+  for (const sx of [-1, 1]) {
+    const arm = M.box(0.5, 0.05, 0.05, PAL.handle, { taper: 0.4 });
+    M.rotY(arm, sx * 0.55);
+    M.translate(arm, sx * 0.2, railY + 0.16, 0.55);
+    M.merge(g, arm);
+  }
+
+  return { mesh: g, height: legY * 2 + 1.65, radius: 1.05 };
+}
+
 /** Orto coltivato: file di ortaggi su terra smossa. */
 export function buildGarden(rnd) {
   const g = M.mesh();

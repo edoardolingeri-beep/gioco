@@ -63,6 +63,11 @@ export const PAL = {
   wolfBelly:  [190, 194, 208],
   wolfEye:    [255, 196,  84],
   fang:       [250, 250, 250],
+  bearA:      [ 92,  62,  46],
+  bearB:      [ 62,  40,  30],
+  bearBelly:  [138, 100,  74],
+  bearEye:    [ 30,  24,  20],
+  bearClaw:   [244, 240, 230],
 
   /* abitanti (varianti di vestiario) */
   npcShirtA:  [214, 122,  96],

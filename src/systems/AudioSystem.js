@@ -206,6 +206,25 @@ export class AudioSystem {
     this._noise(0.3, { freq: 900, q: 0.8, gain: 0.16, slide: 0.35 });
   }
 
+  /** Ruggito dell'orso: stessa forma dell'ululato del lupo ma un'ottava
+   *  sotto e più lungo — deve sentirsi subito "più grosso e più grave". */
+  bearRoar() {
+    this._tone(150, 0.7, { type: 'sawtooth', gain: 0.16, slide: 1.2 });
+    this._tone(80, 0.75, { type: 'triangle', gain: 0.15, slide: 1.15 });
+    this._noise(0.5, { freq: 300, q: 0.6, gain: 0.1, slide: 0.6 });
+  }
+
+  bearDie() {
+    this._tone(160, 0.55, { type: 'sawtooth', gain: 0.18, slide: 0.3 });
+    this._noise(0.45, { freq: 500, q: 0.7, gain: 0.2, slide: 0.3 });
+  }
+
+  /** Scatto della balestra della torretta di guardia. */
+  towerShot() {
+    this._noise(0.08, { freq: 2400, q: 1.8, gain: 0.16, slide: 0.3 });
+    this._tone(520, 0.06, { type: 'triangle', gain: 0.12, slide: 0.3 });
+  }
+
   /* --------------------------------------------------- Fase 2: giocatore */
 
   playerHurt() {

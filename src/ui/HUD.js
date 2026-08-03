@@ -187,6 +187,7 @@ export class HUD {
       <div><b>${s.treesChopped}</b><span>alberi</span></div>
       <div><b>${s.rocksMined}</b><span>massi</span></div>
       <div><b>${s.wolvesKilled}</b><span>lupi</span></div>
+      <div><b>${s.bearsKilled}</b><span>orsi</span></div>
       <div><b>${v.population}</b><span>abitanti</span></div>
       <div><b>${s.coins}</b><span>monete</span></div>
       <div><b>${s.axeLevel}</b><span>ascia</span></div>

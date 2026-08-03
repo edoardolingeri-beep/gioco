@@ -524,6 +524,33 @@ rombi staccati, non un recinto. Il modello (`buildFence` in
 `models/village.js`) ha ora traverse e pali intermedi più spessi apposta:
 restano leggeri visti di fronte, non svaniscono più visti di taglio.
 
+### Un secondo nemico, e la prima difesa che non serve azionare
+
+Il lupo per un po' è stato l'unico pericolo del gioco. Due aggiunte, pensate
+insieme: un nemico più tosto da incontrare, e un modo per difendersi che non
+richiede di correre ovunque a menare fendenti.
+
+**L'orso** (`BearEntity.js`) usa la stessa macchina a stati del lupo —
+VAGA → INSEGUE → ATTACCA → ARRETRA, lo stesso rig procedurale a quattro
+zampe (`models/enemies.js`) — ma tutt'altro carattere: corpo tozzo invece
+che filiforme, passo pesante e più lento, un colpo che fa quasi il doppio
+del danno e un'animazione d'attacco più lunga apposta, perché si faccia in
+tempo a leggerla e scansarsi. Vale molte più monete se abbattuto. Compare
+solo dopo che il villaggio è già "Villaggio" (`bearMinLevel`), e anche
+allora resta l'eccezione: la maggior parte delle ondate (`EnemySpawner`)
+è comunque di lupi, ora anche un po' più frequenti di prima.
+
+**La torretta di guardia** (`TowerEntity.js`, cantiere `guardTower`) è il
+primo edificio che non "si spegne" da finito: ogni altro cantiere, una
+volta completo, esce dalla lista degli aggiornamenti e torna a costare
+quanto un arredo statico (`BuildingEntity.update`, per chi c'è dietro).
+La torretta continua a cercare, ogni frame, il lupo o l'orso più vicino
+nel suo raggio e gli spara da sola, a intervalli — nessun tocco del
+giocatore richiesto, difende anche mentre sei dall'altra parte della
+mappa. Per il resto è un cantiere come tutti gli altri (si paga in
+risorse, sale con la stessa animazione): eredita da `BuildingEntity` e
+aggiunge solo il comportamento di combattimento.
+
 ---
 
 ## Roadmap
@@ -536,8 +563,10 @@ Le cinque fasi previste sono completate. Gli sviluppi naturali da qui:
 
 - **Nuovi biomi** ai bordi della mappa: montagne, deserto, ghiacciaio,
   vulcano, isole, ognuno con materiali, animali e costruzioni esclusive.
-- **Altri nemici** (goblin, scheletri, orsi) con comportamenti diversi dal
-  lupo: chi ruba e scappa, chi attacca in gruppo.
+- **Villaggi rivali**: incursioni vere e proprie invece dei soli animali
+  selvatici — la torretta di guardia è già lì ad aspettarle.
+- **Altri nemici** (goblin, scheletri) con comportamenti diversi dal lupo
+  e dall'orso: chi ruba e scappa, chi attacca in gruppo.
 - **Porto e navi**, sfruttando il sistema di percorsi già usato per il tram.
 - **Meteo**: pioggia e neve, con lo stesso schema a veli usato dalla notte.
 - **Nastri trasportatori**: una costruzione che automatizzi il tratto finale
