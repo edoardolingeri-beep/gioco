@@ -19,12 +19,13 @@
     "test:phase3": "node tools/phase3-test.cjs",
     "test:phase4": "node tools/phase4-test.cjs",
     "test:phase5": "node tools/phase5-test.cjs",
-    "test:all": "node tools/smoke-test.cjs && node tools/phase2-test.cjs && node tools/phase3-test.cjs && node tools/phase4-test.cjs && node tools/phase5-test.cjs && node tools/daynight-test.cjs && node tools/music-test.cjs && node tools/worker-test.cjs && node tools/fence-test.cjs",
+    "test:all": "node tools/smoke-test.cjs && node tools/phase2-test.cjs && node tools/phase3-test.cjs && node tools/phase4-test.cjs && node tools/phase5-test.cjs && node tools/daynight-test.cjs && node tools/music-test.cjs && node tools/worker-test.cjs && node tools/fence-test.cjs && node tools/npc-gate-test.cjs",
     "test:daynight": "node tools/daynight-test.cjs",
     "test:music": "node tools/music-test.cjs",
     "shots:quest": "node tools/quest-shots.cjs",
     "test:worker": "node tools/worker-test.cjs",
-    "test:fence": "node tools/fence-test.cjs"
+    "test:fence": "node tools/fence-test.cjs",
+    "test:npcgate": "node tools/npc-gate-test.cjs"
   },
   "license": "MIT",
   "devDependencies": {

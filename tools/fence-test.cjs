@@ -32,6 +32,18 @@ const shot = (n) => `/tmp/fg-${n}.png`;
   });
   await page.waitForTimeout(1500);
 
+  // Questo test isola il meccanismo "il cancello si apre/chiude in base al
+  // giocatore": dal momento che ora si apre anche per gli abitanti
+  // (opensGates, vedi npc-gate-test.cjs), un abitante nato fuori dal
+  // recinto e diretto verso un varco falserebbe le misurazioni "chiuso da
+  // lontano" qui sotto. Li togliamo di mezzo, non è quello che si sta
+  // verificando in questo file.
+  await page.evaluate(() => {
+    const g = window.game;
+    for (const n of g.village.npcs.slice()) g.world.remove(n);
+    g.village.npcs.length = 0;
+  });
+
   const info = await page.evaluate(() => {
     const g = window.game;
     const gates = g.village.fenceProps.filter((p) => p.constructor.name === 'FenceGateEntity');

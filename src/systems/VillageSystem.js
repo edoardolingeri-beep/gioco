@@ -302,6 +302,11 @@ export class VillageSystem {
     this.fenceProps = [];
     /** Lanterne alle porte: rimosse insieme alla staccionata. */
     this.fenceLights = [];
+    /** Semilato della staccionata quadrata, 0 quando non esiste: gli
+     *  abitanti lo usano per capire se sono fuori dal recinto. */
+    this.fenceHalfExtent = 0;
+    /** Centro di ogni varco, nello stesso ordine dei lati. */
+    this.gateCenters = [];
   }
 
   get maxLevel() { return STAGES.length; }
@@ -417,6 +422,8 @@ export class VillageSystem {
     const gate = g.assets.village.gate;
     if (!fences) return;
 
+    this.fenceHalfExtent = H;
+
     const H_IDX = 0;                  // orientamento orizzontale, esatto
     const V_IDX = FENCE_DIRS / 2;      // orientamento verticale, esatto
 
@@ -428,6 +435,7 @@ export class VillageSystem {
       { along: 'z', fixed: -H, dir: V_IDX, gx: -H, gz: 0 },   // ovest
       { along: 'z', fixed: H, dir: V_IDX, gx: H, gz: 0 },      // est
     ];
+    this.gateCenters = sides.map((s) => ({ x: s.gx, z: s.gz }));
 
     // Passo leggermente più corto della larghezza reale del segmento: i pali
     // si sovrappongono un po' invece di lasciare fessure fra un tratto e
@@ -529,6 +537,8 @@ export class VillageSystem {
     // nessun palo sotto sembrerebbe un errore, non un'atmosfera.
     for (const L of this.fenceLights) g.world.removeLight(L);
     this.fenceLights.length = 0;
+    this.fenceHalfExtent = 0;
+    this.gateCenters.length = 0;
     if (!instant) {
       g.hud.toast('La città ha superato il vecchio recinto 🏙️');
       g.cam.addShake(0.15);

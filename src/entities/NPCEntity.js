@@ -54,6 +54,8 @@ export class NPCEntity extends Entity {
     this.bob = 0;
     /** I carrettieri trascinano un carro: si vedono attraversare il paese. */
     this.hauling = false;
+    /** Fa aprire i cancelli automatici della staccionata quando è vicino. */
+    this.opensGates = true;
   }
 
   /* -------------------------------------------------------------- update */
@@ -108,8 +110,27 @@ export class NPCEntity extends Entity {
     const t = this.target;
     if (!t) { this.act = ACT.IDLE; this.actTimer = 1; return; }
 
-    const d = dist(this.x, this.z, t.x, t.z);
-    if (d < (t.stopDist ?? 1.1) || this.actTimer <= 0) {
+    // Se sono fuori dal recinto e la meta è dentro, il primo passo è
+    // raggiungere il cancello più vicino, non il centro del villaggio: un
+    // tratto chiuso si apre solo per chi gli sta vicino, non per chi punta
+    // dritto altrove, quindi puntare al centro voleva dire restare a
+    // correre contro il muro per sempre.
+    let aimX = t.x, aimZ = t.z, arriving = true;
+    const v = game.village;
+    const H = v.fenceHalfExtent;
+    if (H > 0 && v.gateCenters.length
+        && (Math.abs(this.x) > H || Math.abs(this.z) > H)
+        && Math.abs(t.x) <= H && Math.abs(t.z) <= H) {
+      let best = v.gateCenters[0], bestD = Infinity;
+      for (const gc of v.gateCenters) {
+        const gd = dist(this.x, this.z, gc.x, gc.z);
+        if (gd < bestD) { bestD = gd; best = gc; }
+      }
+      aimX = best.x; aimZ = best.z; arriving = false;
+    }
+
+    const d = dist(this.x, this.z, aimX, aimZ);
+    if (arriving && (d < (t.stopDist ?? 1.1) || this.actTimer <= 0)) {
       // arrivato: fa ciò per cui quel punto esiste
       this.act = t.kind === 'sit' ? ACT.SIT : t.kind === 'work' ? ACT.WORK : ACT.IDLE;
       this.actTimer = fxRand.range(4, 9);
@@ -121,8 +142,16 @@ export class NPCEntity extends Entity {
       if (t.yaw != null) this.yaw = t.yaw;
       return;
     }
+    if (!arriving && this.actTimer <= 0) {
+      // scaduto il tempo di sicurezza mentre si cercava un varco: meglio
+      // fermarsi dov'è che restare bloccato per sempre.
+      this.act = ACT.IDLE;
+      this.actTimer = 1;
+      this.vx = this.vz = 0;
+      return;
+    }
 
-    const dx = t.x - this.x, dz = t.z - this.z;
+    const dx = aimX - this.x, dz = aimZ - this.z;
     this.vx = damp(this.vx, (dx / d) * this.speed, 7, dt);
     this.vz = damp(this.vz, (dz / d) * this.speed, 7, dt);
     this.yaw = angleTowards(this.yaw, Math.atan2(dx, dz), 7 * dt);

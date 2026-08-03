@@ -56,6 +56,8 @@ export class WorkerEntity extends Entity {
     this.anim = 'idle';
     this.animT = fxRand.next();
     this.variant = (Math.random() * NPC_LOOKS_COUNT) | 0;
+    /** Fa aprire i cancelli automatici della staccionata quando è vicino. */
+    this.opensGates = true;
   }
 
   /** Altezza a cui "tiene" la risorsa: serve solo per coerenza di stile con Player. */

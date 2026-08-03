@@ -43,6 +43,8 @@ export class Player extends Entity {
 
     this.stepPhase = 0;
     this.squash = 1;
+    /** Fa aprire i cancelli automatici della staccionata quando è vicino. */
+    this.opensGates = true;
 
     /* --- salute e combattimento (Fase 2) --- */
     this.maxHp = CFG.player.maxHp;

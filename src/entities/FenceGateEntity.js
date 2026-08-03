@@ -3,9 +3,14 @@
  *
  * La staccionata resta un anello chiuso e ordinato — niente più varchi
  * permanenti che sembrano un buco nella recinzione — ma alcuni tratti,
- * quelli marcati da un cancelletto, sprofondano nel terreno quando ti
- * avvicini e risalgono quando te ne vai. Più punti d'ingresso, tutti
+ * quelli marcati da un cancelletto, sprofondano nel terreno quando qualcuno
+ * si avvicina e risalgono quando se ne va. Più punti d'ingresso, tutti
  * automatici: nessun pulsante, nessun cancello da spingere.
+ *
+ * "Qualcuno" non è solo il giocatore: si apre per chiunque abbia
+ * `opensGates` (il giocatore, gli abitanti, gli operai). Senza, gli
+ * abitanti nati fuori dal recinto restavano a correre contro il muro per
+ * sempre, perché il cancello si apriva solo quando arrivavi tu.
  */
 
 import { Entity } from './Entity.js';
@@ -36,9 +41,12 @@ export class FenceGateEntity extends Entity {
   }
 
   update(dt, game) {
-    const p = game.player;
-    const dx = p.x - this.gateX, dz = p.z - this.gateZ;
-    const open = (dx * dx + dz * dz) < this.openRadius * this.openRadius;
+    const near = game.scratch.gateNear ?? (game.scratch.gateNear = []);
+    game.grid.queryRadius(this.gateX, this.gateZ, this.openRadius, near);
+    let open = false;
+    for (let i = 0; i < near.length; i++) {
+      if (near[i].opensGates) { open = true; break; }
+    }
 
     if (open !== this._wasOpen) {
       this._wasOpen = open;

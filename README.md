@@ -476,6 +476,17 @@ Nessuna sprite di un cancello che si apre — il motore non anima mesh dal
 vivo — solo scala, trasparenza e un offset verticale sulla sprite già cotta,
 più una nuvoletta di polvere a ogni cambio di stato.
 
+Il cancello non guarda solo il giocatore: si apre per chiunque porti il
+segno `opensGates` (`Player`, `NPCEntity`, `WorkerEntity`), verificato con
+una query sulla griglia spaziale attorno al varco invece che sulla sola
+posizione di `game.player`. Senza, gli abitanti che nascono fuori dal
+recinto (così si vedono arrivare) restavano a correre contro un tratto
+chiuso per sempre — il cancello si apriva solo quando arrivavi tu. Per
+farceli davvero entrare, `NPCEntity._go()` riconosce quando è fuori dal
+recinto con una meta al suo interno e punta prima al centro del varco più
+vicino (`VillageSystem.gateCenters`), passando alla meta reale solo una
+volta dentro.
+
 ---
 
 ## Roadmap
