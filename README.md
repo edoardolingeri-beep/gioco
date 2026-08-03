@@ -147,6 +147,26 @@ panchine, pozzi, bracieri e staccionate, e arrivano nuovi abitanti.
 
 ---
 
+## Provarlo subito
+
+### Dal telefono, senza installare niente
+
+Il gioco è pubblicato come sito su GitHub Pages:
+
+**https://edoardolingeri-beep.github.io/gioco/**
+
+Aprilo dal browser del telefono. Funziona esattamente come nell'app: gira a
+schermo intero, salva i progressi in locale e si può aggiungere alla schermata
+Home ("Aggiungi a Home" su iOS, "Installa app" su Android).
+
+> **Prima volta**: GitHub Pages va acceso una sola volta a mano, in
+> *Settings → Pages → Build and deployment → Source: **GitHub Actions***.
+> Dopo quel clic, ogni push ripubblica il sito da solo (workflow
+> `.github/workflows/pages.yml`); per pubblicare subito senza aspettare un
+> push, *Actions → Pubblica su GitHub Pages → Run workflow*.
+
+---
+
 ## Eseguire il progetto
 
 ### In un browser (sviluppo veloce)
