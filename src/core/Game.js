@@ -27,6 +27,9 @@ import { QualityManager } from '../systems/QualityManager.js';
 import { VillageSystem } from '../systems/VillageSystem.js';
 import { EnemySpawner } from '../systems/EnemySpawner.js';
 import { TrafficSystem } from '../systems/TrafficSystem.js';
+import { DayNightSystem } from '../systems/DayNightSystem.js';
+import { ObjectiveSystem } from '../systems/ObjectiveSystem.js';
+import { MusicSystem } from '../systems/MusicSystem.js';
 import { HUD } from '../ui/HUD.js';
 import { Joystick } from '../ui/Joystick.js';
 import { drawOffscreenArrow } from '../ui/WorldUI.js';
@@ -74,7 +77,7 @@ export class Game {
       chopSpeed: 1, mineSpeed: 1,
       attackDamage: CFG.player.baseDamage,
       // bonus concessi dagli edifici
-      logBonus: 0, stoneBonus: 0, ironBonus: 0, warehouseBonus: 0,
+      logBonus: 0, stoneBonus: 0, ironBonus: 0, goldBonus: 0, warehouseBonus: 0,
       sellBonus: 1, income: 0, regenMul: 1,
       // contatori
       treesChopped: 0, rocksMined: 0, ironMined: 0, goldMined: 0,
@@ -84,6 +87,9 @@ export class Game {
     this.time = 0;
     this.scratch = { near: [] };
     this.quality = new QualityManager(this);
+    this.dayNight = new DayNightSystem(this);
+    this.objectives = new ObjectiveSystem(this);
+    this.music = new MusicSystem(this);
     this.rebaker = null;
     this.showDebug = false;
 
@@ -143,12 +149,16 @@ export class Game {
     // successivo: è il motore dell'evoluzione del mondo.
     this.bus.on('building:done', (b) => {
       this.hud.toast(`${b.def.name} costruita!${b.def.perk ? ' ' + b.def.perk : ''} 🏡`);
+      this._lightWindows(b);
       this.recomputeStats();
       this.village.levelUp();
       this._unlockNextSite(b.def.id);
       this.spawner.enable();
       this.save();
     });
+
+    // La colonna sonora cresce col villaggio: nuovo livello, nuovo tema.
+    this.bus.on('village:level', () => this.music.setPhase(this.village.phase));
 
     this.bus.on('enemy:killed', (e) => {
       const reward = CFG.enemies.wolf.reward;
@@ -167,6 +177,13 @@ export class Game {
       this.stats.upgradeIndex = this.world.workbench.index;
       this.recomputeStats();
       this.save();
+    });
+  }
+
+  /** Finestre illuminate: la sagoma dell'edificio si accende di notte. */
+  _lightWindows(b) {
+    this.world.addLight(b.x, 0.9, b.z + b.radius * 0.5, {
+      radius: b.radius * 0.9, alpha: 0.5,
     });
   }
 
@@ -270,7 +287,7 @@ export class Game {
     const base = { stone: CFG.harvest.stonePerRock, iron: CFG.harvest.ironPerVein,
       gold: CFG.harvest.goldPerVein }[type] ?? 1;
     const bonus = { stone: this.stats.stoneBonus, iron: this.stats.ironBonus,
-      gold: 0 }[type] ?? 0;
+      gold: this.stats.goldBonus }[type] ?? 0;
     const n = base + bonus;
     for (let i = 0; i < n; i++) {
       const p = this.pickups.spawn(
@@ -301,6 +318,9 @@ export class Game {
     this.fx.update(dt);
     this.texts.update(dt);
 
+    this.dayNight.update(dt);
+    this.objectives.update(dt);
+    this.music.update();
     this.cam.update(dt, this.player);
 
     this.joystick.update();
@@ -346,8 +366,16 @@ export class Game {
     this.delivery.draw(r, this.assets);
     r.flush(this.assets.fx.shadow);
 
-    // 3. particelle e numeri volanti
+    // 3. particelle
     this.fx.draw(ctx, cam, this.assets.fx.spark);
+
+    // 3b. atmosfera: prima il velo della sera, POI i bagliori delle luci.
+    //     È quest'ordine a far sembrare accese le finestre e i lampioni.
+    this.dayNight.drawTint(ctx, r.w, r.h);
+    this.world.syncLights();
+    this.dayNight.drawLights(ctx, cam, this.world.lights, this.assets.fx);
+
+    // 3c. i numeri volanti stanno sopra l'atmosfera, o di notte sparirebbero
     this.texts.draw(ctx, cam, r.dpr);
 
     // 4. pannelli nel mondo (con budget di fumetti per non coprire il gioco)
@@ -360,21 +388,33 @@ export class Game {
     if (this.showDebug) this._drawDebug(r);
   }
 
+  /**
+   * Frecce ai bordi dello schermo verso ciò che conta adesso.
+   *
+   * Puntano allo STESSO obiettivo scritto nella HUD: due indizi che dicono la
+   * stessa cosa guidano; due che si contraddicono confondono e basta.
+   */
   _drawGuides(ctx, cam, dpr) {
     const w = this.world;
-    // freccia verso il cantiere attivo (il primo non ancora completato)
-    if (this.carry.total > 0) {
-      for (const id of BUILD_ORDER) {
-        const b = w.buildings[id];
-        if (b && b.available && b.unlocked && b.state === BUILD_STATE.BLUEPRINT) {
-          drawOffscreenArrow(ctx, cam, dpr, b.x, b.z, '#7cc8ff', '🏠');
-          break;
-        }
-      }
+    const key = this.objectives.current.key;
+
+    // il cantiere attivo: il primo aperto e non ancora finito
+    let site = null;
+    for (const id of BUILD_ORDER) {
+      const b = w.buildings[id];
+      if (b && b.available && b.state === BUILD_STATE.BLUEPRINT) { site = b; break; }
     }
-    if (w.merchant && this.carry.isFull) {
+
+    const toSite = key === 'deliver' || key === 'deliver-any' || key === 'unlock-go'
+      || (key === 'gather' && this.carry.total > 0);
+    if (site && toSite) drawOffscreenArrow(ctx, cam, dpr, site.x, site.z, '#7cc8ff', '🏠');
+
+    // il mercante: quando servono monete, o comunque quando lo zaino è pieno
+    const toMerchant = key === 'unlock-coins' || key === 'buy-coins' || this.carry.isFull;
+    if (w.merchant && toMerchant) {
       drawOffscreenArrow(ctx, cam, dpr, w.merchant.x, w.merchant.z, '#ffce54', '🪙');
     }
+
     const up = UPGRADES[w.workbench?.index];
     if (up && this.stats.coins >= up.cost) {
       drawOffscreenArrow(ctx, cam, dpr, w.workbench.x, w.workbench.z, '#6ee7a0', up.icon);
@@ -418,6 +458,7 @@ export class Game {
         logBonus: this.stats.logBonus,
         stoneBonus: this.stats.stoneBonus,
         ironBonus: this.stats.ironBonus,
+        goldBonus: this.stats.goldBonus,
         sellBonus: this.stats.sellBonus,
         income: this.stats.income,
         regenMul: this.stats.regenMul,
@@ -429,6 +470,7 @@ export class Game {
         goldMined: this.stats.goldMined,
         wolvesKilled: this.stats.wolvesKilled,
         villageLevel: this.village.level,
+        dayTime: this.dayNight.time,
         traffic: { roads: this.traffic.enabled, tram: this.traffic.tramEnabled },
         buildings,
         player: { x: this.player.x, z: this.player.z },
@@ -456,6 +498,7 @@ export class Game {
     s.logBonus = data.logBonus ?? 0;
     s.stoneBonus = data.stoneBonus ?? 0;
     s.ironBonus = data.ironBonus ?? 0;
+    s.goldBonus = data.goldBonus ?? 0;
     s.sellBonus = data.sellBonus ?? 1;
     s.income = data.income ?? 0;
     s.regenMul = data.regenMul ?? 1;
@@ -486,15 +529,20 @@ export class Game {
         // Alcuni edifici modificano il mondo (il ponte apre il fiume):
         // l'effetto va riapplicato al caricamento, senza fanfare.
         def.onRestore?.(this, b);
+        // Anche le finestre vanno riaccese: al caricamento l'evento
+        // `building:done` non scatta.
+        this._lightWindows(b);
       }
     }
 
     // il villaggio torna al livello raggiunto, senza rigiocare le animazioni
     const lvl = data.villageLevel ?? (saved.hut?.state === BUILD_STATE.DONE ? 1 : 0);
     if (lvl > 0) { this.village.restore(lvl); this.spawner.enable(); }
+    this.music.setPhase(this.village.phase);
     // Il traffico si riattiva senza annunci (ci pensa già `onRestore`, ma
     // teniamo anche il flag salvato come rete di sicurezza).
     if (data.traffic) this.traffic.restore(data.traffic.roads, data.traffic.tram);
+    if (data.dayTime != null) this.dayNight.setTime(data.dayTime);
     if (data.player) {
       this.player.x = data.player.x;
       this.player.z = data.player.z;

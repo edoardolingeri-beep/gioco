@@ -299,6 +299,17 @@ export class VillageSystem {
 
   get maxLevel() { return STAGES.length; }
 
+  /**
+   * Fase narrativa 1..5 — foresta, villaggio, paese, città, metropoli.
+   * I livelli sono diciotto perché il mondo cresce a piccoli passi; la fase
+   * è la lettura "grossa" che serve a chi deve cambiare registro tutto
+   * insieme (la musica, per esempio).
+   */
+  get phase() {
+    const l = this.level;
+    return l <= 1 ? 1 : l <= 5 ? 2 : l <= 8 ? 3 : l <= 13 ? 4 : 5;
+  }
+
   /** Registra un punto di interesse per gli abitanti. */
   addPOI(x, z, kind = 'work', stopDist = 1.2, yaw = null) {
     this.pointsOfInterest.push({ x, z, kind, stopDist, yaw });
@@ -331,6 +342,18 @@ export class VillageSystem {
       });
       g.world.add(prop, !instant);
       if (p.poi) this.addPOI(p.x, p.z, p.poi.kind, p.poi.stopDist, p.poi.yaw);
+
+      // Bracieri e lampioni illuminano: il braciere tremola come una fiamma,
+      // il lampione elettrico no.
+      if (p.sprite === 'brazier') {
+        g.world.addLight(p.x, 1.3, p.z, { radius: 1.9, alpha: 0.78, flicker: true });
+      } else if (p.sprite === 'lamp') {
+        g.world.addLight(p.x, 1.75, p.z + 0.3, { radius: 1.7, alpha: 0.72, flicker: true });
+      } else if (p.sprite === 'cityLamp') {
+        g.world.addLight(p.x, 2.45, p.z, { radius: 2.1, alpha: 0.72, cold: true });
+      } else if (p.sprite === 'kiosk') {
+        g.world.addLight(p.x, 1.2, p.z + 0.6, { radius: 1.2, alpha: 0.6, cold: true });
+      }
     });
 
     if (stage.fenceRing) this._buildFenceRing(instant);

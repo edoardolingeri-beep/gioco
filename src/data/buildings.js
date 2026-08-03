@@ -158,6 +158,15 @@ Object.assign(BUILDINGS, {
     spot: { x: -11.6, z: -7.4 },
     perk: '+1 ferro per vena, attacchi più forti',
     effect: (s) => { s.ironBonus += 1; s.smithy = true; },
+    onComplete: (game) => {
+      const b = game.world.buildings.smithy;
+      game.world.addLight(b.x + 0.95, 0.9, b.z + 2.0, {
+        radius: 1.7, alpha: 0.85, flicker: true,
+      });
+    },
+    onRestore: (game, b) => game.world.addLight(b.x + 0.95, 0.9, b.z + 2.0, {
+      radius: 1.7, alpha: 0.85, flicker: true,
+    }),
     /** Scintille e bagliore dalla forgia sempre accesa. */
     overlay: (r, game, self) => {
       if (Math.random() < 0.06) {
@@ -235,8 +244,8 @@ Object.assign(BUILDINGS, {
     radius: 2.0,
     zone: 3.4,
     spot: { x: -8.2, z: 14.8 },
-    perk: 'Rendita passiva in monete',
-    effect: (s) => { s.income += 3; },
+    perk: 'Rendita in monete, +1 oro per filone',
+    effect: (s) => { s.income += 8; s.goldBonus += 1; },
   },
 
   hospital: {
@@ -245,7 +254,7 @@ Object.assign(BUILDINGS, {
     sprite: 'hospital',
     requires: 'bank',
     unlockCost: 2000,
-    cost: { stone: 320, iron: 150, gold: 30 },
+    cost: { stone: 300, iron: 130, gold: 24 },
     radius: 2.1,
     zone: 3.4,
     spot: { x: 10.2, z: 14.8 },
@@ -264,7 +273,7 @@ Object.assign(BUILDINGS, {
     sprite: 'skyscraperA',
     requires: 'hospital',
     unlockCost: 2600,
-    cost: { stone: 380, iron: 220, gold: 60 },
+    cost: { stone: 350, iron: 190, gold: 45 },
     radius: 1.9,
     zone: 3.4,
     spot: { x: -4.6, z: -11.4 },
@@ -279,7 +288,7 @@ Object.assign(BUILDINGS, {
     sprite: 'station',
     requires: 'tower',
     unlockCost: 3200,
-    cost: { wood: 200, stone: 340, iron: 260 },
+    cost: { wood: 200, stone: 300, iron: 220 },
     radius: 2.2,
     zone: 3.6,
     spot: { x: 15.6, z: -2.4 },
@@ -294,7 +303,7 @@ Object.assign(BUILDINGS, {
     sprite: 'skyscraperB',
     requires: 'station',
     unlockCost: 4200,
-    cost: { stone: 420, iron: 320, gold: 90 },
+    cost: { stone: 380, iron: 270, gold: 70 },
     radius: 1.8,
     zone: 3.2,
     spot: { x: 2.6, z: -12.6 },
@@ -307,12 +316,12 @@ Object.assign(BUILDINGS, {
     sprite: 'factory',
     requires: 'tower2',
     unlockCost: 5200,
-    cost: { stone: 460, iron: 400, gold: 80 },
+    cost: { stone: 420, iron: 340, gold: 60 },
     radius: 2.6,
     zone: 3.8,
     spot: { x: -16.4, z: -9.6 },
     perk: '+2 di ogni risorsa raccolta',
-    effect: (s) => { s.logBonus += 2; s.stoneBonus += 2; s.ironBonus += 1; },
+    effect: (s) => { s.logBonus += 2; s.stoneBonus += 2; s.ironBonus += 1; s.goldBonus += 1; },
     /** Le ciminiere fumano di continuo: la città al lavoro. */
     overlay: (r, game, self) => {
       if (Math.random() < 0.22) {
@@ -328,12 +337,12 @@ Object.assign(BUILDINGS, {
     sprite: 'airport',
     requires: 'factory',
     unlockCost: 7000,
-    cost: { stone: 520, iron: 480, gold: 160 },
+    cost: { stone: 480, iron: 400, gold: 120 },
     radius: 3.2,
     zone: 4.4,
     spot: { x: 19.5, z: 14.5 },
     perk: 'La metropoli è completa',
-    effect: (s) => { s.income += 12; s.sellBonus += 0.8; },
+    effect: (s) => { s.income += 25; s.sellBonus += 0.8; },
   },
 });
 

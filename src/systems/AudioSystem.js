@@ -16,6 +16,7 @@ export class AudioSystem {
     this.enabled = true;
     this.ready = false;
     this._noiseBuf = null;
+    this.musicVolume = CFG.audio.music;
   }
 
   /** Deve essere chiamato dentro un gesto dell'utente (policy dei browser). */
@@ -34,6 +35,11 @@ export class AudioSystem {
     comp.threshold.value = -18;
     comp.ratio.value = 8;
     this.master.connect(comp).connect(this.ctx.destination);
+    // La musica ha un suo bus, così si può abbassare senza toccare gli
+    // effetti (ed è comunque figlia del master: il muto spegne tutto).
+    this.musicBus = this.ctx.createGain();
+    this.musicBus.gain.value = this.musicVolume;
+    this.musicBus.connect(this.master);
     this._makeNoise();
     this.ready = true;
   }
@@ -41,6 +47,15 @@ export class AudioSystem {
   setEnabled(v) {
     this.enabled = v;
     if (this.master) this.master.gain.value = v ? CFG.audio.master : 0;
+  }
+
+  /** Volume della sola musica (0 = spenta). */
+  setMusicVolume(v) {
+    this.musicVolume = v;
+    if (this.musicBus) {
+      // Rampa breve: un taglio netto produrrebbe un "click".
+      this.musicBus.gain.setTargetAtTime(v, this.ctx.currentTime, 0.08);
+    }
   }
 
   _makeNoise() {

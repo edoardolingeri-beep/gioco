@@ -35,6 +35,49 @@ export class World {
     this.rnd = new Rand(CFG.world.seed);
     this.terrain = null;
     this.river = new River();
+    /**
+     * Sorgenti luminose: si accendono di notte. Alcune seguono un'entità
+     * (i fari delle auto), quindi la posizione viene aggiornata prima del
+     * disegno.
+     */
+    this.lights = [];
+  }
+
+  /**
+   * Registra una luce.
+   * @param {object} o { radius, alpha, flicker, cold, follow, sprite, offZ }
+   */
+  addLight(x, y, z, o = {}) {
+    const L = {
+      x, y, z,
+      radius: o.radius ?? 1.6,
+      alpha: o.alpha ?? 0.55,
+      flicker: o.flicker ?? false,
+      // `cold` = luce elettrica (lampioni, fari); altrimenti fiamma o finestra.
+      cold: o.cold ?? false,
+      seed: Math.random() * 10,
+      follow: o.follow ?? null,
+      offY: o.offY ?? 0,
+      offZ: o.offZ ?? 0,
+      sprite: o.sprite ?? null,
+    };
+    this.lights.push(L);
+    return L;
+  }
+
+  /** Aggiorna le luci agganciate a un'entità (fari, lanterne portate). */
+  syncLights() {
+    for (let i = this.lights.length - 1; i >= 0; i--) {
+      const L = this.lights[i];
+      if (!L.follow) continue;
+      if (L.follow.dead) { this.lights.splice(i, 1); continue; }
+      // i fari puntano in avanti rispetto al muso del veicolo
+      const f = L.follow;
+      const fx = Math.sin(f.yaw ?? 0), fz = Math.cos(f.yaw ?? 0);
+      L.x = f.x + fx * L.offZ;
+      L.z = f.z + fz * L.offZ;
+      L.y = L.offY;
+    }
   }
 
   add(e, dynamic = false) {
@@ -217,6 +260,7 @@ export class World {
     this.campfire = this.add(new StaticProp(0, 0, assets.buildings.campfire, {
       solid: true, radius: 0.75, shadow: 0.7,
     }));
+    this.addLight(0, 0.4, 0, { radius: 1.8, alpha: 0.8, flicker: true });
 
     /* --- cantieri: uno per ogni edificio della progressione --- */
     this.buildings = {};

@@ -181,3 +181,32 @@ export function bakeGlow(size, color, softness = 0.5) {
   ctx.fillRect(0, 0, size, size);
   return { canvas, w: size, h: size, ax: size / 2, ay: size / 2 };
 }
+
+/**
+ * Alone di una SORGENTE luminosa (lampione, braciere, finestra).
+ *
+ * Rispetto a `bakeGlow` la caduta è a potenza e quindi molto più stretta:
+ * con una caduta larga bastano una decina di lampioni perché lo schermo
+ * torni chiaro come di giorno, e la notte sparisce.
+ * L'alone è anche schiacciato in verticale come le ombre, perché la luce
+ * si posa a terra e la terra la vediamo di scorcio.
+ */
+export function bakeLightGlow(size, color, power = 2.6) {
+  const h = Math.max(2, Math.round(size * SIN_P));
+  const canvas = makeCanvas(size, h);
+  const ctx = canvas.getContext('2d');
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  for (let i = 0; i <= 12; i++) {
+    const r = i / 12;
+    g.addColorStop(r, `rgba(${color[0]},${color[1]},${color[2]},`
+      + `${Math.pow(1 - r, power).toFixed(4)})`);
+  }
+  ctx.save();
+  ctx.translate(size / 2, h / 2);
+  ctx.scale(1, SIN_P);
+  ctx.translate(-size / 2, -size / 2);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  ctx.restore();
+  return { canvas, w: size, h, ax: size / 2, ay: h / 2 };
+}

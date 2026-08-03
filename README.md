@@ -90,6 +90,19 @@ stata rifinita fino in fondo prima di proseguire:
 | Fino a 54 abitanti distribuiti sui marciapiedi | ✅ |
 | 16 potenziamenti, 18 costruzioni, 18 livelli di crescita | ✅ |
 
+### Rifinitura — atmosfera, guida e musica
+
+| Funzionalità | Stato |
+|---|---|
+| **Ciclo giorno/notte** completo: alba, giorno, tramonto, notte | ✅ |
+| **Lampioni, bracieri, finestre e fari** che si accendono davvero | ✅ |
+| Ora d'oro dorata all'alba e al tramonto | ✅ |
+| **Cartello dell'obiettivo**: dice sempre qual è il prossimo passo | ✅ |
+| Frecce ai bordi coerenti con l'obiettivo mostrato | ✅ |
+| **Colonna sonora procedurale** che cambia con la fase del mondo | ✅ |
+| Musica più sommessa e in tonalità grave durante la notte | ✅ |
+| Bilanciamento delle risorse tardive (pietra, ferro, oro) | ✅ |
+
 Il percorso completo va dalla prima capanna nella radura alla capitale con
 l'aeroporto: cinque fasi, ognuna che trasforma il mondo sotto gli occhi di chi
 gioca.
@@ -120,6 +133,14 @@ Non ci sono menù: **tutto succede nel mondo**.
   fermo un istante.
 - **Sbloccare cantieri** — i progetti chiusi 🔒 si aprono pagando in monete,
   sempre restando fermi un attimo nell'area.
+
+- **Orientarsi** — sotto gli indicatori c'è sempre una riga con l'obiettivo
+  corrente ("Raccogli legno per Capanna", "Vendi al mercante per aprire la
+  Segheria") e la sua barra di avanzamento. Le frecce ai bordi dello schermo
+  puntano alla stessa cosa.
+- **La notte** — il mondo ha un ciclo di cinque minuti. Al tramonto la luce si
+  fa dorata, poi scende il blu e si accendono bracieri, lampioni, finestre e
+  i fari delle auto. Non ci sono penalità: è atmosfera.
 
 Ogni edificio completato fa **salire di livello il villaggio**: spuntano orti,
 panchine, pozzi, bracieri e staccionate, e arrivano nuovi abitanti.
@@ -246,6 +267,9 @@ src/
     VillageSystem.js       livelli del villaggio ed evoluzione del mondo
     EnemySpawner.js        ondate di nemici, con zone sicure
     TrafficSystem.js       anelli stradali, semafori, auto e tram
+    DayNightSystem.js      velo atmosferico e bagliori delle luci
+    ObjectiveSystem.js     deduce dal gioco qual è il prossimo passo
+    MusicSystem.js         colonna sonora generata nota per nota
 
   ui/
     HUD.js                 indicatori, toast, pannello opzioni (DOM)
@@ -264,6 +288,9 @@ tools/                     strumenti di sviluppo (Playwright)
     phase3-test.cjs        verifica di fiume, ponte, ferro, mulino, strade
     phase4-test.cjs        verifica di oro, città, asfalto, parco, banca
     phase5-test.cjs        verifica di traffico, semafori, tram, metropoli
+    daynight-test.cjs      verifica del ciclo del giorno e delle luci
+    music-test.cjs         verifica del metronomo e dei temi musicali
+    quest-shots.cjs        schermate del cartello dell'obiettivo
     screenshots.cjs        cattura i momenti chiave
     phase2-shots.cjs       porta la partita a villaggio completo
     perf.cjs               profila il costo del frame
@@ -317,6 +344,42 @@ Altre scelte pensate per il telefono:
 - HUD e joystick sono in **DOM+CSS**, composti dalla GPU: non rubano tempo al
   ciclo di rendering del canvas.
 
+### Notte senza illuminazione per pixel
+
+Il ciclo giorno/notte non calcola luci: dipinge. Sopra la scena già disegnata
+passano, in quest'ordine,
+
+1. **un velo in `multiply`** che spegne i colori verso il blu della notte (o
+   li scalda verso l'arancio all'alba e al tramonto). `multiply` è la scelta
+   giusta perché l'erba resta erba, solo più cupa: un velo opaco appiattirebbe
+   tutto in una tinta unica;
+2. **un soffio additivo** di azzurro lunare, che serve soprattutto a
+   desaturare — col solo `multiply` il prato resta verde acceso e la notte
+   sembra un pomeriggio nuvoloso;
+3. **i bagliori delle sorgenti luminose**, disegnati DOPO il velo: è
+   quest'ordine a far sembrare accesi lampioni, bracieri e finestre.
+
+I bagliori finiscono prima in un buffer con `lighten` — che tiene il massimo
+canale per canale, non la somma — e solo dopo vanno sulla scena. Sommandoli
+direttamente, una piazza con dieci lampioni tornava luminosa quanto di giorno:
+misurato, 122 su 255 di media contro i 117 del mezzogiorno. Col massimo la
+stessa piazza sta a 83, illuminata a chiazze come dev'essere.
+
+Il costo è di due riempimenti di schermo e una manciata di blit, e di giorno
+il sistema esce subito senza disegnare nulla.
+
+### Musica generata, non riprodotta
+
+Come gli effetti, la colonna sonora è sintetizzata con WebAudio: zero byte di
+download e — soprattutto — la possibilità di **cambiare con il mondo**. Ogni
+fase ha il suo tema (arpa rada nella foresta, basso e battito nella
+metropoli), il cambio avviene a inizio battuta e di notte le voci scendono
+d'ottava e di volume.
+
+Il tempo lo tiene la timeline dell'AudioContext, non il game loop: le note
+vengono programmate con 0,7 secondi di anticipo, quindi restano a tempo anche
+se il frame rate balla.
+
 ---
 
 ## Roadmap
@@ -332,7 +395,7 @@ Le cinque fasi previste sono completate. Gli sviluppi naturali da qui:
 - **Altri nemici** (goblin, scheletri, orsi) con comportamenti diversi dal
   lupo: chi ruba e scappa, chi attacca in gruppo.
 - **Porto e navi**, sfruttando il sistema di percorsi già usato per il tram.
-- **Ciclo giorno/notte**, con i lampioni che si accendono davvero.
+- **Meteo**: pioggia e neve, con lo stesso schema a veli usato dalla notte.
 
 Il motore dell'evoluzione è già in funzione: `VillageSystem` tiene un livello
 che sale a ogni costruzione completata, e ogni livello elenca in `STAGES` gli

@@ -10,7 +10,7 @@
 
 import { CFG } from '../data/config.js';
 import { Rand } from '../core/Rand.js';
-import { bakeMesh, bakeShadow, bakeGlow, makeCanvas } from './SpriteBaker.js';
+import { bakeMesh, bakeShadow, bakeGlow, bakeLightGlow, makeCanvas } from './SpriteBaker.js';
 import { PAL } from '../data/palette.js';
 import * as Nature from '../models/nature.js';
 import * as Build from '../models/buildings.js';
@@ -129,6 +129,10 @@ export class AssetForge {
       A.fx.glowGold = bakeGlow(72, [255, 206, 84], 0.3);
       A.fx.spark = bakeGlow(28, [255, 255, 255], 0.25);
       A.fx.ring = this._bakeRing(160);
+      // Aloni delle sorgenti luminose: uno caldo (fuoco, finestre) e uno
+      // freddo (lampioni elettrici, fari).
+      A.fx.lightWarm = bakeLightGlow(160, [255, 206, 138], 2.6);
+      A.fx.lightCold = bakeLightGlow(160, [206, 226, 255], 2.8);
     });
 
     /* ------------------------------------------------------- personaggio */

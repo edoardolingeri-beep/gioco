@@ -76,15 +76,15 @@ export const CFG = {
     treeGrowTime: 3.5,
     // Pietra (Fase 2)
     rockHits: 6,          // picconate con il piccone di livello 1
-    stonePerRock: 2,
+    stonePerRock: 3,
     rockRegrowDelay: 30,
     // Ferro (Fase 3): richiede il piccone d'acciaio
     ironHits: 9,
-    ironPerVein: 2,
+    ironPerVein: 3,
     ironRegrowDelay: 45,
     // Oro (Fase 4): raro, richiede il piccone da minatore
     goldHits: 13,
-    goldPerVein: 1,
+    goldPerVein: 2,
     goldRegrowDelay: 70,
   },
 
@@ -182,15 +182,25 @@ export const CFG = {
     // "chiazza" ne contiene già 5-9 in un'unica sprite (vedi buildGrassPatch).
     rockCount: 90,        // massi raccoglibili col piccone (Fase 2)
     ironCount: 55,        // vene di ferro, solo oltre il fiume (Fase 3)
-    goldCount: 20,        // filoni d'oro, rari e lontani (Fase 4)
+    goldCount: 26,        // filoni d'oro, rari e lontani (Fase 4)
     patchCount: 1100,
     flowerCount: 130,
     pebbleCount: 260,
     cellSize: 4,         // dimensione cella della griglia spaziale
   },
 
+  /* --------------------------------------------------------- giorno/notte */
+  dayNight: {
+    dayLength: 300,      // secondi per un ciclo completo (5 minuti)
+    startTime: 0.34,     // si comincia a metà mattina
+    maxDarkness: 0.72,   // quanto scende la luce a mezzanotte
+    moonlight: 0.26,     // quanto azzurro la luna aggiunge al buio
+    lightsOn: 0.22,      // oscurità alla quale si accendono le luci
+    warmth: 0.58,        // intensità del velo dorato di alba e tramonto
+  },
+
   /* ------------------------------------------------------------------- audio */
-  audio: { master: 0.5 },
+  audio: { master: 0.5, music: 0.34 },
 
   /* -------------------------------------------------------------------- fx */
   fx: {

@@ -179,6 +179,10 @@ export class TrafficSystem {
     }, g);
     this.roadPath.vehicles.push(v);
     g.world.add(v, true);
+    // I fari: una luce agganciata al veicolo, spostata davanti al muso.
+    g.world.addLight(v.x, 0.4, v.z, {
+      radius: 1.6, alpha: 0.7, follow: v, offZ: 1.6, offY: 0.4, cold: true,
+    });
     return v;
   }
 
@@ -207,6 +211,9 @@ export class TrafficSystem {
       }, g);
       this.tramPath.vehicles.push(v);
       g.world.add(v, true);
+      g.world.addLight(v.x, 0.9, v.z, {
+        radius: 2.0, alpha: 0.7, follow: v, offZ: 2.4, offY: 0.9, cold: true,
+      });
     }
     g.hud.toast('La linea del tram è in servizio 🚋');
   }

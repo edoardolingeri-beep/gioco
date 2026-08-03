@@ -35,6 +35,17 @@ export class HUD {
         <button class="icon-btn" id="hud-menu" data-ui aria-label="Opzioni">⚙️</button>
       </div>
 
+      <!-- Il cartello dell'obiettivo: una riga sola, sempre la stessa
+           posizione, così l'occhio sa dove guardare quando non sa che fare -->
+      <div class="quest" id="hud-quest" hidden>
+        <span class="quest-icon" id="hud-quest-icon">🎯</span>
+        <div class="quest-body">
+          <div class="quest-text" id="hud-quest-text"></div>
+          <div class="bar"><i id="hud-quest-bar"></i></div>
+        </div>
+        <span class="quest-count" id="hud-quest-count"></span>
+      </div>
+
       <!-- Barra della salute: compare solo quando serve, per non ingombrare -->
       <div class="health" id="hud-health" hidden>
         <i id="hud-health-fill"></i>
@@ -46,6 +57,7 @@ export class HUD {
         <div class="sheet-card">
           <h2>Opzioni</h2>
           <label class="row"><span>🔊 Suoni</span><input type="checkbox" id="opt-audio" checked></label>
+          <label class="row"><span>🎵 Musica</span><input type="checkbox" id="opt-music" checked></label>
           <label class="row"><span>📳 Vibrazione</span><input type="checkbox" id="opt-haptics" checked></label>
           <label class="row"><span>🐞 Debug</span><input type="checkbox" id="opt-debug"></label>
           <div class="stat-row" id="opt-stats"></div>
@@ -68,10 +80,16 @@ export class HUD {
       village: this.root.querySelector('#hud-village'),
       pop: this.root.querySelector('#hud-pop'),
       health: this.root.querySelector('#hud-health'),
+      quest: this.root.querySelector('#hud-quest'),
+      questIcon: this.root.querySelector('#hud-quest-icon'),
+      questText: this.root.querySelector('#hud-quest-text'),
+      questBar: this.root.querySelector('#hud-quest-bar'),
+      questCount: this.root.querySelector('#hud-quest-count'),
       healthFill: this.root.querySelector('#hud-health-fill'),
     };
 
     this.healthShown = 1;
+    this._questKey = '';
 
     this.shownCoins = 0;
     this.targetCoins = 0;
@@ -116,6 +134,9 @@ export class HUD {
     this.root.querySelector('#opt-audio').addEventListener('change', (e) => {
       g.audio.setEnabled(e.target.checked);
     });
+    this.root.querySelector('#opt-music').addEventListener('change', (e) => {
+      g.music.setEnabled(e.target.checked);
+    });
     this.root.querySelector('#opt-haptics').addEventListener('change', (e) => {
       g.haptics.setEnabled(e.target.checked);
     });
@@ -156,6 +177,34 @@ export class HUD {
     this.el.stats.dataset.stage = v.stageName;
   }
 
+  /**
+   * Cartello dell'obiettivo. Il DOM viene toccato solo quando il testo cambia
+   * davvero: scrivere ogni frame in `textContent` costringerebbe il browser a
+   * rifare il layout sessanta volte al secondo per nulla.
+   */
+  _refreshQuest() {
+    const o = this.game.objectives?.current;
+    if (!o || !o.text) { this.el.quest.hidden = true; return; }
+    this.el.quest.hidden = false;
+
+    const key = `${o.key}|${o.text}|${o.have}/${o.need}`;
+    if (key === this._questKey) return;
+    const changed = this._questKey.split('|')[1] !== o.text;
+    this._questKey = key;
+
+    this.el.questIcon.textContent = o.icon;
+    this.el.questText.textContent = o.text;
+    const ratio = o.need > 0 ? Math.min(1, o.have / o.need) : 0;
+    this.el.questBar.style.transform = `scaleX(${ratio})`;
+    this.el.questCount.textContent = o.need > 0 ? `${o.have}/${o.need}` : '';
+
+    if (changed) {
+      this.el.quest.classList.remove('pop');
+      void this.el.quest.offsetWidth;
+      this.el.quest.classList.add('pop');
+    }
+  }
+
   /** Messaggio temporaneo in alto (eventi importanti). */
   toast(text, ms = 2600) {
     const el = document.createElement('div');
@@ -178,6 +227,8 @@ export class HUD {
       this.shownCoins += Math.sign(diff) * Math.min(step, Math.abs(diff));
       this.el.coinsN.textContent = this.shownCoins;
     }
+
+    this._refreshQuest();
 
     // Barra della salute: appare quando sei ferito e sparisce quando guarisci.
     const p = this.game.player;
