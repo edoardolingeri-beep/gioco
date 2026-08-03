@@ -15,11 +15,17 @@
 
 import { CFG } from '../data/config.js';
 import { GrowProp } from '../entities/GrowProp.js';
+import { FenceGateEntity } from '../entities/FenceGateEntity.js';
 import { NPCEntity } from '../entities/NPCEntity.js';
 import { PAL } from '../data/palette.js';
 import { FENCE_DIRS } from '../render/AssetForge.js';
 import { fxRand } from '../core/Rand.js';
 import { TAU } from '../core/MathUtils.js';
+
+/** Quanti varchi automatici ha la staccionata, distribuiti sul perimetro. */
+const GATE_COUNT = 3;
+/** Ampiezza angolare di ciascun varco (quanti tratti diventano cancelli). */
+const GATE_HALF_WIDTH = 0.16;
 
 /**
  * Cosa compare a ogni livello del villaggio.
@@ -387,28 +393,54 @@ export class VillageSystem {
     g.bus.emit('village:level', this.level);
   }
 
-  /** Staccionata perimetrale con un varco verso il bosco. */
+  /**
+   * Staccionata perimetrale, un anello chiuso senza buchi permanenti.
+   *
+   * Alcuni tratti — quelli sotto i cancelletti decorativi, distribuiti sul
+   * perimetro — sono `FenceGateEntity`: sprofondano da soli quando ti
+   * avvicini e risalgono quando te ne vai. Da lontano il recinto sembra
+   * intero e serio; da vicino, dove serve, si apre senza che tu debba fare
+   * nulla.
+   */
   _buildFenceRing(instant) {
     const g = this.game;
     const R = CFG.village.fenceRadius;
     const n = CFG.village.fenceSegments;
-    const gateAngle = Math.PI * 0.25;    // direzione del varco
+    const fences = g.assets.village.fences;
+    const gate = g.assets.village.gate;
+    if (!fences) return;
+
+    // I varchi sono distribuiti a intervalli regolari, il primo nella
+    // stessa direzione di sempre (verso il bosco) per continuità.
+    const gateAngles = [];
+    for (let k = 0; k < GATE_COUNT; k++) {
+      gateAngles.push(Math.PI * 0.25 + (k / GATE_COUNT) * TAU);
+    }
 
     for (let i = 0; i < n; i++) {
       const a = (i / n) * TAU;
-      // lascia aperto un settore: è l'ingresso del villaggio
-      const delta = Math.abs(((a - gateAngle + Math.PI) % TAU) - Math.PI);
-      if (delta < 0.34) continue;
-
       const x = Math.cos(a) * R;
       const z = Math.sin(a) * R;
 
       // Ogni segmento è TANGENTE al cerchio: scegliamo la sprite già cotta
       // nell'orientamento più vicino a quello richiesto.
       const tangent = a + Math.PI / 2;
-      const fences = g.assets.village.fences;
-      if (!fences) continue;
       const idx = ((Math.round((tangent / Math.PI) * FENCE_DIRS) % FENCE_DIRS) + FENCE_DIRS) % FENCE_DIRS;
+
+      // Il tratto più vicino a un varco diventa un cancello automatico.
+      let nearestGate = null, nearestD = Infinity;
+      for (const ga of gateAngles) {
+        const d = Math.abs(((a - ga + Math.PI) % TAU) - Math.PI);
+        if (d < nearestD) { nearestD = d; nearestGate = ga; }
+      }
+
+      if (nearestD < GATE_HALF_WIDTH) {
+        const gx = Math.cos(nearestGate) * R, gz = Math.sin(nearestGate) * R;
+        const seg = new FenceGateEntity(x, z, gx, gz, fences[idx], { radius: 0.6, shadow: 0.34 });
+        g.world.add(seg, true);
+        this.fenceProps.push(seg);
+        continue;
+      }
 
       const prop = new GrowProp(x, z, fences[idx], {
         solid: true, radius: 0.6, shadow: 0.34,
@@ -419,14 +451,15 @@ export class VillageSystem {
       this.fenceProps.push(prop);
     }
 
-    // il cancello vero e proprio
-    const gx = Math.cos(gateAngle) * R, gz = Math.sin(gateAngle) * R;
-    const gate = g.assets.village.gate;
+    // I cancelletti veri e propri: uno per varco, segnano dove il recinto si apre.
     if (gate) {
-      this.fenceProps.push(g.world.add(new GrowProp(gx, gz, gate, {
-        solid: false, radius: 0.9, shadow: 0.5,
-        delay: instant ? 0 : 1.2, instant, silent: instant,
-      }), !instant));
+      for (const ga of gateAngles) {
+        const gx = Math.cos(ga) * R, gz = Math.sin(ga) * R;
+        this.fenceProps.push(g.world.add(new GrowProp(gx, gz, gate, {
+          solid: false, radius: 0.9, shadow: 0.5,
+          delay: instant ? 0 : 1.2, instant, silent: instant,
+        }), !instant));
+      }
     }
   }
 

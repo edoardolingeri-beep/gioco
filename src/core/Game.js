@@ -27,6 +27,7 @@ import { QualityManager } from '../systems/QualityManager.js';
 import { VillageSystem } from '../systems/VillageSystem.js';
 import { EnemySpawner } from '../systems/EnemySpawner.js';
 import { TrafficSystem } from '../systems/TrafficSystem.js';
+import { WorkerSystem } from '../systems/WorkerSystem.js';
 import { DayNightSystem } from '../systems/DayNightSystem.js';
 import { ObjectiveSystem } from '../systems/ObjectiveSystem.js';
 import { MusicSystem } from '../systems/MusicSystem.js';
@@ -109,6 +110,7 @@ export class Game {
     this.village = new VillageSystem(this);
     this.spawner = new EnemySpawner(this);
     this.traffic = new TrafficSystem(this);
+    this.workers = new WorkerSystem(this);
 
     this.world = new World(this);
     this.world.generate(this.assets, this.cam.basePPU);
@@ -475,6 +477,7 @@ export class Game {
         villageLevel: this.village.level,
         dayTime: this.dayNight.time,
         traffic: { roads: this.traffic.enabled, tram: this.traffic.tramEnabled },
+        workers: this.workers.counts,
         buildings,
         player: { x: this.player.x, z: this.player.z },
         carry: this.carry.stack.map((s) => s.type),
@@ -515,6 +518,11 @@ export class Game {
 
     const w = this.world;
     w.workbench.index = data.upgradeIndex ?? 0;
+
+    // Quanti operai erano stati assunti: va fatto PRIMA del ciclo qui sotto,
+    // perché `registerStation` (chiamato da `onRestore`) li rimette al
+    // lavoro subito se il conteggio è già a posto.
+    if (data.workers) Object.assign(this.workers.counts, data.workers);
 
     // stato dei cantieri
     const saved = data.buildings ?? (data.hut ? { hut: data.hut } : {});

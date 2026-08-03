@@ -103,6 +103,17 @@ stata rifinita fino in fondo prima di proseguire:
 | Musica più sommessa e in tonalità grave durante la notte | ✅ |
 | Bilanciamento delle risorse tardive (pietra, ferro, oro) | ✅ |
 
+### Automazione — gli operai e un recinto che si apre da solo
+
+| Funzionalità | Stato |
+|---|---|
+| **Boscaiolo** e **Minatore**: si assumono pagando alla segheria/cava | ✅ |
+| Lavorano da soli — cercano un albero/masso, lo abbattono, tornano | ✅ |
+| Si possono assumere fino a 3 operai per mestiere, ognuno costa di più | ✅ |
+| Quel che raccolgono aiuta prima i cantieri aperti, poi si vende da sé | ✅ |
+| **Staccionata** ridisegnata: zoccolo di pietra, pali più solidi | ✅ |
+| **Varchi automatici** (3, distribuiti sul perimetro): si aprono da soli quando ti avvicini, si richiudono quando te ne vai | ✅ |
+
 Il percorso completo va dalla prima capanna nella radura alla capitale con
 l'aeroporto: cinque fasi, ognuna che trasforma il mondo sotto gli occhi di chi
 gioca.
@@ -141,6 +152,14 @@ Non ci sono menù: **tutto succede nel mondo**.
 - **La notte** — il mondo ha un ciclo di cinque minuti. Al tramonto la luce si
   fa dorata, poi scende il blu e si accendono bracieri, lampioni, finestre e
   i fari delle auto. Non ci sono penalità: è atmosfera.
+- **Assumere operai** — appena la segheria o la cava sono costruite, lì
+  accanto compare un cartello: restaci fermo con abbastanza monete e assumi
+  un boscaiolo o un minatore, che da quel momento raccoglie da solo, aiuta i
+  cantieri aperti e torna a lavorare senza che tu debba fare nulla. Se ne
+  possono assumere fino a tre per mestiere, ognuno più caro del precedente.
+- **Il recinto** — attorno al primo villaggio compare una staccionata chiusa,
+  con qualche varco: basta avvicinarsi perché quel tratto si apra da solo, e
+  si richiude appena te ne vai.
 
 Ogni edificio completato fa **salire di livello il villaggio**: spuntano orti,
 panchine, pozzi, bracieri e staccionate, e arrivano nuovi abitanti.
@@ -274,6 +293,9 @@ src/
     WolfEntity.js                         nemici
     VehicleEntity.js                      auto e tram sul loro percorso
     GrowProp.js                           arredi che spuntano dal terreno
+    HireStationEntity.js                  cartello per assumere un operaio
+    WorkerEntity.js                       l'operaio: cerca, lavora, consegna
+    FenceGateEntity.js                    tratto di staccionata che si apre da solo
 
   systems/                 meccaniche trasversali
     CarrySystem.js         zaino e catasta ordinata sulla schiena
@@ -290,6 +312,7 @@ src/
     DayNightSystem.js      velo atmosferico e bagliori delle luci
     ObjectiveSystem.js     deduce dal gioco qual è il prossimo passo
     MusicSystem.js         colonna sonora generata nota per nota
+    WorkerSystem.js        assunzione operai e dove finisce ciò che raccolgono
 
   ui/
     HUD.js                 indicatori, toast, pannello opzioni (DOM)
@@ -300,7 +323,7 @@ src/
     native.js              barra di stato, orientamento, tasto Indietro
 
   data/                    tutti i numeri e le definizioni, separati dal codice
-    config.js  palette.js  buildings.js
+    config.js  palette.js  buildings.js  workers.js
 
 tools/                     strumenti di sviluppo (Playwright)
     smoke-test.cjs         verifica end-to-end del ciclo di Fase 1
@@ -311,6 +334,8 @@ tools/                     strumenti di sviluppo (Playwright)
     daynight-test.cjs      verifica del ciclo del giorno e delle luci
     music-test.cjs         verifica del metronomo e dei temi musicali
     quest-shots.cjs        schermate del cartello dell'obiettivo
+    worker-test.cjs        verifica assunzione, lavoro e consegne degli operai
+    fence-test.cjs         verifica dei varchi automatici della staccionata
     screenshots.cjs        cattura i momenti chiave
     phase2-shots.cjs       porta la partita a villaggio completo
     perf.cjs               profila il costo del frame
@@ -399,6 +424,36 @@ d'ottava e di volume.
 Il tempo lo tiene la timeline dell'AudioContext, non il game loop: le note
 vengono programmate con 0,7 secondi di anticipo, quindi restano a tempo anche
 se il frame rate balla.
+
+### Gli operai non passano dallo zaino del giocatore
+
+Un operaio non usa il ciclo raccolta→zaino→consegna del giocatore: sarebbe
+stato o troppo lento (aspettare che cammini avanti e indietro come un NPC) o
+troppo invisibile (numeri che cambiano senza che nulla si veda). Invece:
+
+1. cerca l'albero o il masso raccoglibile più vicino al suo cartello;
+2. ci cammina vicino e "lavora" per qualche secondo, con gli stessi chip e
+   suoni del colpo del giocatore;
+3. allo scadere, l'albero cade (o il masso si sbriciola) **in silenzio** —
+   `TreeEntity.fell`/`RockEntity.shatter` accettano un flag che salta la
+   generazione dei tronchi a terra, perché l'operaio se li porta già "in
+   spalla" — e torna al cartello;
+4. lì consegna: prima aiuta il primo cantiere aperto che ha ancora bisogno
+   di quel tipo di risorsa (`BuildingEntity._receive`, la stessa funzione
+   usata per le consegne del giocatore), altrimenti si vende da sé, come al
+   mercante. Un operaio non lavora mai a vuoto.
+
+### Un recinto che si apre da solo
+
+La staccionata era un anello con un varco fisso, sempre aperto: da vicino
+sembrava un buco nella recinzione, non un ingresso. Ora è un anello chiuso —
+mai un buco visibile — con alcuni tratti, quelli sotto i cancelletti, che
+sono entità a parte (`FenceGateEntity`): sprofondano nel terreno quando il
+giocatore entra nel loro raggio e risalgono quando se ne va, ridiventando
+solidi solo a metà chiusura per non respingerlo mentre sta ancora passando.
+Nessuna sprite di un cancello che si apre — il motore non anima mesh dal
+vivo — solo scala, trasparenza e un offset verticale sulla sprite già cotta,
+più una nuvoletta di polvere a ogni cambio di stato.
 
 ---
 

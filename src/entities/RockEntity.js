@@ -52,6 +52,8 @@ export class RockEntity extends Entity {
     this.maxHp = o.hits ?? CFG.harvest.rockHits;
     this.hp = this.maxHp;
     this.harvestable = true;
+    /** Un operaio al lavoro qui: nessun altro operaio lo sceglie come bersaglio. */
+    this.reservedBy = null;
 
     this.shake = 0;
     this.shakePhase = 0;
@@ -101,8 +103,12 @@ export class RockEntity extends Entity {
     return false;
   }
 
-  /** Il masso esplode in schegge e rilascia la pietra. */
-  shatter(game) {
+  /**
+   * Il masso esplode in schegge e rilascia la pietra.
+   * @param {boolean} silent se true non fa cadere minerale a terra: lo porta
+   *   già con sé chi lo ha frantumato (un operaio).
+   */
+  shatter(game, silent = false) {
     this.state = ROCK_STATE.BROKEN;
     this.solid = false;
     this.harvestable = false;
@@ -112,13 +118,14 @@ export class RockEntity extends Entity {
     this.hintDwell = 0;
     this.hintCounted = false;
     this.hintVisiting = false;
+    this.reservedBy = null;
 
     game.audio.rockBreak();
     game.haptics.fire('heavy', 0);
     game.cam.addShake(0.42);
     game.fx.chips(this.x, 0.5 * this.scale, this.z, 18, this.chipColor ?? rgbToCss(PAL.stone), 1.5);
     game.fx.puff(this.x, 0.1, this.z, 10, 'rgba(198,200,208,0.85)', 1.1, 0.32);
-    game.spawnOre(this);
+    if (!silent) game.spawnOre(this);
   }
 
   update(dt, game) {

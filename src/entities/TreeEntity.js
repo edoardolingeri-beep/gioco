@@ -48,6 +48,8 @@ export class TreeEntity extends Entity {
     this.timer = 0;
     this.growT = 0;
     this.harvestable = true;
+    /** Un operaio al lavoro qui: nessun altro operaio lo sceglie come bersaglio. */
+    this.reservedBy = null;
   }
 
   /** Colpisci l'albero. Ritorna true se questo colpo lo abbatte. */
@@ -77,11 +79,17 @@ export class TreeEntity extends Entity {
     return false;
   }
 
-  /** Fa cadere l'albero nella direzione del colpo. */
-  fell(dirX, dirZ, game) {
+  /**
+   * Fa cadere l'albero nella direzione del colpo.
+   * @param {boolean} silent se true non fa cadere tronchi a terra: li porta
+   *   già con sé chi lo ha abbattuto (un operaio), non c'è nulla da
+   *   raccogliere fisicamente.
+   */
+  fell(dirX, dirZ, game, silent = false) {
     this.state = TREE_STATE.FALLING;
     this.fallT = 0;
     this.solid = false;
+    this.silentFall = silent;
     // Cade "verso destra" o "verso sinistra" sullo schermo, a seconda del colpo.
     this.fallDir = dirX >= 0 ? 1 : -1;
     if (Math.abs(dirX) < 0.25) this.fallDir = fxRand.chance(0.5) ? 1 : -1;
@@ -115,7 +123,7 @@ export class TreeEntity extends Entity {
           game.fx.leaves(cx, 0.6, cz, 10, rgbToCss(PAL.leafB));
           game.cam.addShake(0.45);
           game.haptics.fire('heavy', 0);
-          game.spawnLogs(this);
+          if (!this.silentFall) game.spawnLogs(this);
         }
         if (this.fallT >= 1.25) this.toStump();
         break;
@@ -149,6 +157,7 @@ export class TreeEntity extends Entity {
     this.solid = false;
     this.harvestable = false;
     this.radius = 0.3;
+    this.reservedBy = null;
   }
 
   draw(r, game) {

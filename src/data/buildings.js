@@ -44,6 +44,10 @@ export const BUILDINGS = {
     spot: { x: -8.5, z: -3.6 },
     perk: '+1 tronco per albero',
     effect: (s) => { s.logBonus += 1; },
+    // Con la segheria si può assumere un boscaiolo: il cartello compare
+    // lì accanto, pronto per la prima automazione della partita.
+    onComplete: (game) => game.workers.registerStation('lumberjack', game.world.buildings.sawmill),
+    onRestore: (game) => game.workers.registerStation('lumberjack', game.world.buildings.sawmill),
   },
 
   quarry: {
@@ -58,6 +62,8 @@ export const BUILDINGS = {
     spot: { x: 8.2, z: 5.4 },
     perk: '+1 pietra per masso',
     effect: (s) => { s.stoneBonus += 1; },
+    onComplete: (game) => game.workers.registerStation('miner', game.world.buildings.quarry),
+    onRestore: (game) => game.workers.registerStation('miner', game.world.buildings.quarry),
   },
 
   house: {

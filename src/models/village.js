@@ -269,28 +269,37 @@ export function buildWarehouse() {
  *
  * Dall'alto una staccionata bassa si confonde con una panchina: per questo i
  * pali sono alti e a punta, e le traverse sono sottili e distanziate — la
- * silhouette resta inequivocabile anche a colpo d'occhio.
+ * silhouette resta inequivocabile anche a colpo d'occhio. Uno zoccolo di
+ * pietra alla base dà peso al recinto: senza, da questa inquadratura
+ * inclinata sembra un insieme di stecchini piantati nel prato.
  */
 export function buildFence() {
   const g = M.mesh();
+  // zoccolo di pietra: ancora il recinto al terreno invece di farlo
+  // sembrare appoggiato sopra
+  const footing = M.box(1.5, 0.16, 0.22, PAL.stoneDark);
+  M.translate(footing, 0, 0.08, 0);
+  M.merge(g, footing);
+
   for (const sx of [-1, 1]) {
-    const post = M.box(0.13, 0.98, 0.13, PAL.fenceDark);
-    M.translate(post, sx * 0.6, 0, 0);
+    const post = M.box(0.16, 1.04, 0.16, PAL.fenceDark);
+    M.translate(post, sx * 0.62, 0.06, 0);
     M.merge(g, post);
     // punta piramidale
-    const tip = M.cone(0.1, 0.16, 4, PAL.fence);
-    M.translate(tip, sx * 0.6, 0.98, 0);
+    const tip = M.cone(0.12, 0.18, 4, PAL.fence);
+    M.translate(tip, sx * 0.62, 1.1, 0);
     M.merge(g, tip);
   }
-  for (const y of [0.4, 0.72]) {
-    const rail = M.box(1.32, 0.075, 0.055, PAL.fence);
+  for (const y of [0.34, 0.62, 0.9]) {
+    const rail = M.box(1.36, 0.08, 0.06, PAL.fence);
     M.translate(rail, 0, y, 0);
     M.merge(g, rail);
   }
   // pali intermedi, sottili
-  const mid = M.box(0.08, 0.86, 0.08, PAL.fenceDark);
+  const mid = M.box(0.1, 0.94, 0.1, PAL.fenceDark);
+  M.translate(mid, 0, 0.06, 0);
   M.merge(g, mid);
-  return { mesh: g, height: 1.14, radius: 0.66 };
+  return { mesh: g, height: 1.28, radius: 0.7 };
 }
 
 /** Cancelletto: interrompe la staccionata all'ingresso del villaggio. */
