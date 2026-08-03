@@ -16,6 +16,17 @@ import { clamp, damp, easeOutBack, rgbToCss } from '../core/MathUtils.js';
 
 export const ROCK_STATE = { SOLID: 0, BROKEN: 1, REFORMING: 2 };
 
+/** Quante volte, per tipo di risorsa, il fumetto compare non appena ci si
+ *  avvicina. Dopo, ha già insegnato quel che doveva: si fa vedere solo a chi
+ *  resta lì fermo a provare a spaccarla davvero. */
+const HINT_FREE_SHOWS = 2;
+/** Raggio entro cui ci si "accorge" del masso (in unità al quadrato). */
+const HINT_NOTICE_R2 = 3 * 3;
+/** Raggio, più stretto, entro cui fermarsi conta come "ci sta provando". */
+const HINT_TRY_R2 = 1.9 * 1.9;
+/** Secondi di sosta continua prima che il fumetto tardivo si faccia vedere. */
+const HINT_DWELL = 0.45;
+
 export class RockEntity extends Entity {
   /**
    * @param {object} o opzioni: { resource, hits, regrow, requiredPick, hint }
@@ -48,6 +59,13 @@ export class RockEntity extends Entity {
     this.timer = 0;
     this.growT = 0;
     this.squash = 1;
+
+    /* --- fumetto "serve il piccone" --- */
+    this.hintT = 0;
+    this.hintDwell = 0;
+    this.hintCounted = false;
+    this.hintVisiting = false;   // il giocatore è entrato nel raggio d'attenzione
+    this.hintFree = false;       // questa visita rientra ancora nelle "prime volte"?
   }
 
   /** Il tipo di risorsa che produce. */
@@ -90,6 +108,10 @@ export class RockEntity extends Entity {
     this.harvestable = false;
     this.radius = 0.34;
     this.timer = 0;
+    this.hintT = 0;
+    this.hintDwell = 0;
+    this.hintCounted = false;
+    this.hintVisiting = false;
 
     game.audio.rockBreak();
     game.haptics.fire('heavy', 0);
@@ -108,6 +130,7 @@ export class RockEntity extends Entity {
           this.shakePhase += dt * 24;
           this.shake *= Math.exp(-9 * dt);
         } else this.shake = 0;
+        this._updateHint(dt, game);
         break;
 
       case ROCK_STATE.BROKEN:
@@ -164,14 +187,66 @@ export class RockEntity extends Entity {
   }
 
   /**
-   * Se ti avvicini senza piccone compare un suggerimento: è il modo del gioco
-   * di spiegare la progressione senza aprire un tutorial.
+   * Il fumetto "serve il piccone" spiega la progressione senza un tutorial,
+   * ma non deve diventare un cartello fisso: le prime volte compare appena ti
+   * avvicini (è lì per insegnare), dopo si fa vedere solo se ti fermi a
+   * provare a spaccarla — segno che stai davvero cercando di capire perché
+   * non ci riesci, non che stai solo passando di lì.
    */
+  _updateHint(dt, game) {
+    if (this.canMine(game.stats)) {
+      this.hintT = Math.max(0, this.hintT - dt * 2.4);
+      this.hintDwell = 0;
+      this.hintVisiting = false;
+      return;
+    }
+
+    const p = game.player;
+    const d2 = (p.x - this.x) ** 2 + (p.z - this.z) ** 2;
+    if (d2 > HINT_NOTICE_R2) {
+      this.hintT = Math.max(0, this.hintT - dt * 2.4);
+      this.hintDwell = 0;
+      // Uscire dal raggio chiude la visita: al prossimo ingresso si decide
+      // di nuovo se è ancora una delle "prime volte".
+      this.hintVisiting = false;
+      return;
+    }
+
+    // La decisione "è ancora una prima volta?" si prende UNA SOLA VOLTA per
+    // visita, appena si entra nel raggio — non a ogni frame. Rileggendo il
+    // contatore in continuazione, il fumetto stesso lo fa scattare a metà
+    // della propria apparizione e si spegne da solo a metà frase.
+    if (!this.hintVisiting) {
+      this.hintVisiting = true;
+      this.hintCounted = false;
+      const shown = game.stats.rockHintsSeen[this.resourceType] ?? 0;
+      this.hintFree = shown < HINT_FREE_SHOWS;
+    }
+
+    let eligible;
+    if (this.hintFree) {
+      eligible = true;
+    } else {
+      const trying = d2 < HINT_TRY_R2 && p.speed < 1.3;
+      this.hintDwell = trying ? this.hintDwell + dt : Math.max(0, this.hintDwell - dt * 2);
+      eligible = this.hintDwell >= HINT_DWELL;
+    }
+
+    if (eligible) {
+      this.hintT = Math.min(1, this.hintT + dt * 3.2);
+      if (this.hintT >= 0.99 && !this.hintCounted) {
+        const seen = game.stats.rockHintsSeen;
+        seen[this.resourceType] = (seen[this.resourceType] ?? 0) + 1;
+        this.hintCounted = true;
+      }
+    } else {
+      this.hintT = Math.max(0, this.hintT - dt * 2.4);
+    }
+  }
+
   drawUI(ctx, cam, dpr, game) {
-    if (this.state !== ROCK_STATE.SOLID || this.canMine(game.stats)) return;
-    const d2 = (game.player.x - this.x) ** 2 + (game.player.z - this.z) ** 2;
-    if (d2 > 9) return;
-    this.hintT = Math.min(1, (this.hintT ?? 0) + 0.12);
+    void game;
+    if (this.hintT <= 0.01) return;
     drawPanel(ctx, cam, dpr, this.x, this.sprite.height * this.scale + 0.5, this.z, {
       title: this.hintText,
       appear: this.hintT,

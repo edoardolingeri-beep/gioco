@@ -16,6 +16,7 @@ import { TreeEntity, TREE_STATE } from './TreeEntity.js';
 import { RockEntity, ROCK_STATE } from './RockEntity.js';
 import { WolfEntity } from './WolfEntity.js';
 import { depthOf } from '../render/Projection.js';
+import { drawPanel } from '../ui/WorldUI.js';
 import { clamp, damp, angleTowards, angleDelta, TAU, easeOutBack } from '../core/MathUtils.js';
 
 export class Player extends Entity {
@@ -53,6 +54,11 @@ export class Player extends Entity {
     this.attackTimer = 0;
     this.enemyTarget = null;
     this.reviveT = 0;
+
+    /* --- fumetto "zaino pieno" --- */
+    this.blockedByFull = false;
+    this.bagFullHintT = 0;
+    this._wasBlockedByFull = false;
   }
 
   /* ------------------------------------------------------------- salute */
@@ -195,6 +201,16 @@ export class Player extends Entity {
     /* --- azioni automatiche: combattere, tagliare, scavare --- */
     this._updateAction(dt, game);
 
+    // Il fumetto "zaino pieno" si accende solo sul fronte di salita (il
+    // momento in cui il blocco comincia), non a ogni frame in cui resta
+    // bloccato: un "denied" continuo infastidirebbe più di quanto informi.
+    if (this.blockedByFull && !this._wasBlockedByFull) {
+      game.audio.denied();
+      game.haptics.fire('light', 40);
+    }
+    this._wasBlockedByFull = this.blockedByFull;
+    this.bagFullHintT = damp(this.bagFullHintT, this.blockedByFull ? 1 : 0, 7, dt);
+
     /* --- animazione --- */
     this._updateAnim(dt, game);
   }
@@ -277,8 +293,12 @@ export class Player extends Entity {
     // Si raccoglie da fermi (o spingendo contro la risorsa, dato che è solida).
     const stationary = this.speed < 1.2;
     let best = null, bestScore = Infinity;
+    // Vero se c'è una risorsa raccoglibile a tiro ma lo zaino è pieno: è la
+    // condizione in cui il personaggio si ferma senza fare nulla, e merita
+    // una spiegazione — non solo silenzio.
+    let blockedByFull = false;
 
-    if (stationary && !game.carry.isFull) {
+    if (stationary) {
       for (let i = 0; i < near.length; i++) {
         const e = near[i];
         let ok = false;
@@ -294,6 +314,9 @@ export class Player extends Entity {
         const dx = e.x - this.x, dz = e.z - this.z;
         const d = Math.hypot(dx, dz) - e.radius;
         if (d > range) continue;
+
+        if (game.carry.isFull) { blockedByFull = true; continue; }
+
         // a parità di distanza si preferisce ciò che si ha davanti
         const ang = Math.abs(angleDelta(this.yaw, Math.atan2(dx, dz)));
         const score = d + ang * 0.35;
@@ -301,6 +324,7 @@ export class Player extends Entity {
       }
     }
 
+    this.blockedByFull = blockedByFull;
     this.target = best;
 
     if (best) {
@@ -396,6 +420,23 @@ export class Player extends Entity {
     });
 
     this._drawStack(r, game, depth);
+  }
+
+  /**
+   * Fumetto "zaino pieno": spiega perché il personaggio si è fermato senza
+   * fare nulla davanti a un albero o un masso. Stesso linguaggio visivo del
+   * suggerimento "serve il piccone" sopra le rocce, ma legato al giocatore
+   * (lo zaino è pieno indipendentemente da QUALE risorsa sta guardando).
+   */
+  drawUI(ctx, cam, dpr, game) {
+    void game;
+    if (this.bagFullHintT < 0.02) return;
+    drawPanel(ctx, cam, dpr, this.x, CFG.player.height + 0.3, this.z, {
+      title: 'Zaino pieno 🎒',
+      appear: this.bagFullHintT,
+      width: 150,
+      titleColor: '#ffce54',
+    });
   }
 
   /**

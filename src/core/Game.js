@@ -82,6 +82,9 @@ export class Game {
       // contatori
       treesChopped: 0, rocksMined: 0, ironMined: 0, goldMined: 0,
       wolvesKilled: 0, upgradeIndex: 0,
+      // quante volte il fumetto "serve il piccone" è già comparso, per tipo
+      // di risorsa: dopo le prime volte si fa vedere solo se ti fermi lì
+      rockHintsSeen: {},
     };
 
     this.time = 0;
