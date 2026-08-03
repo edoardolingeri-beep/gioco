@@ -218,6 +218,17 @@ export class AudioSystem {
     this._tone(520, 0.14, { type: 'sine', gain: 0.1, slide: 1.5 });
   }
 
+  /** Clacson dell'auto o campanello del tram. */
+  horn(isTram = false) {
+    if (isTram) {
+      this._tone(1180, 0.14, { type: 'sine', gain: 0.1 });
+      this._tone(1560, 0.2, { type: 'sine', gain: 0.08, delay: 0.1 });
+    } else {
+      this._tone(420, 0.22, { type: 'square', gain: 0.09 });
+      this._tone(316, 0.22, { type: 'square', gain: 0.08 });
+    }
+  }
+
   /** Fanfara del villaggio che sale di livello. */
   villageGrow() {
     [0, 0.1, 0.2, 0.32, 0.46].forEach((d, i) => this._tone(

@@ -26,6 +26,7 @@ import { Haptics } from '../systems/Haptics.js';
 import { QualityManager } from '../systems/QualityManager.js';
 import { VillageSystem } from '../systems/VillageSystem.js';
 import { EnemySpawner } from '../systems/EnemySpawner.js';
+import { TrafficSystem } from '../systems/TrafficSystem.js';
 import { HUD } from '../ui/HUD.js';
 import { Joystick } from '../ui/Joystick.js';
 import { drawOffscreenArrow } from '../ui/WorldUI.js';
@@ -34,7 +35,7 @@ import { BUILD_STATE } from '../entities/BuildingEntity.js';
 import { BUILD_ORDER, BUILDINGS } from '../data/buildings.js';
 
 const SAVE_KEY = 'gioco.save.v1';
-const SAVE_VERSIONS = [1, 2, 3, 4];
+const SAVE_VERSIONS = [1, 2, 3, 4, 5];
 
 export class Game {
   /**
@@ -98,6 +99,7 @@ export class Game {
 
     this.village = new VillageSystem(this);
     this.spawner = new EnemySpawner(this);
+    this.traffic = new TrafficSystem(this);
 
     this.world = new World(this);
     this.world.generate(this.assets, this.cam.basePPU);
@@ -292,6 +294,7 @@ export class Game {
 
     this.world.update(dt, this);
     this.spawner.update(dt, this);
+    this.traffic.update(dt);
     this.carry.update(dt);
     this.pickups.update(dt);
     this.delivery.update(dt);
@@ -404,7 +407,7 @@ export class Game {
         };
       }
       const data = {
-        v: 4,
+        v: 5,
         coins: this.stats.coins,
         axeLevel: this.stats.axeLevel,
         pickLevel: this.stats.pickLevel,
@@ -426,6 +429,7 @@ export class Game {
         goldMined: this.stats.goldMined,
         wolvesKilled: this.stats.wolvesKilled,
         villageLevel: this.village.level,
+        traffic: { roads: this.traffic.enabled, tram: this.traffic.tramEnabled },
         buildings,
         player: { x: this.player.x, z: this.player.z },
         carry: this.carry.stack.map((s) => s.type),
@@ -488,6 +492,9 @@ export class Game {
     // il villaggio torna al livello raggiunto, senza rigiocare le animazioni
     const lvl = data.villageLevel ?? (saved.hut?.state === BUILD_STATE.DONE ? 1 : 0);
     if (lvl > 0) { this.village.restore(lvl); this.spawner.enable(); }
+    // Il traffico si riattiva senza annunci (ci pensa già `onRestore`, ma
+    // teniamo anche il flag salvato come rete di sicurezza).
+    if (data.traffic) this.traffic.restore(data.traffic.roads, data.traffic.tram);
     if (data.player) {
       this.player.x = data.player.x;
       this.player.z = data.player.z;

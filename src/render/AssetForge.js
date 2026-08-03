@@ -17,6 +17,7 @@ import * as Build from '../models/buildings.js';
 import * as Village from '../models/village.js';
 import * as Town from '../models/town.js';
 import * as City from '../models/city.js';
+import * as Metro from '../models/metro.js';
 import { buildCharacter, buildCarriedLog, CHAR, TOOL } from '../models/character.js';
 import { buildWolf, buildAlertMark, ENEMY } from '../models/enemies.js';
 import { rotY as rotateMeshY } from './Mesh.js';
@@ -65,6 +66,18 @@ const MILL_ANGLES = 16;
 /** Fotogrammi dei getti della fontana. */
 const JET_FRAMES = 7;
 
+/** Direzioni dei veicoli. Il tram è grande: gliene bastano meno. */
+const CAR_DIRS = 16;
+const TRAM_DIRS = 12;
+
+/** Modelli di automobile in circolazione. */
+const CAR_MODELS = [
+  { color: PAL.carRed, kind: 0 },
+  { color: PAL.carBlue, kind: 0 },
+  { color: PAL.carWhite, kind: 0 },
+  { color: PAL.carYellow, kind: 1 },
+];
+
 /**
  * Applica una tinta uniforme a una sprite già cotta (per i "fantasmi"
  * degli edifici in costruzione).
@@ -90,6 +103,7 @@ export class AssetForge {
       oreRocks: [], rubble: [], ironVeins: [], goldVeins: [],
       char: null, wolf: null, npc: [],
       buildings: {}, village: {}, fx: {},
+      cars: [], trams: [], lights: [],
     };
     this.jobs = [];
     this.done = 0;
@@ -299,6 +313,52 @@ export class AssetForge {
       for (let i = 0; i < JET_FRAMES; i++) {
         A.fountainJets.push(bakeMesh(City.buildFountainJets(i / JET_FRAMES), { outline: 1.2 }));
       }
+    });
+
+    /* ------------------------------------------------- edifici di Fase 5 */
+    const phase5 = [
+      ['skyscraperA', () => Metro.buildSkyscraper({ h: 5.6, w: 2.5, d: 2.0, style: 0 })],
+      ['skyscraperB', () => Metro.buildSkyscraper({ h: 7.0, w: 2.2, d: 1.9, style: 2 })],
+      ['station', Metro.buildStation],
+      ['factory', Metro.buildFactory],
+      ['airport', Metro.buildAirport],
+    ];
+    for (const [id, fn] of phase5) {
+      this._job(() => {
+        A.buildings[id] = this._bakeProp(fn(), 2);
+        A.buildings[id + 'Ghost'] = tintSprite(A.buildings[id], '#8ad4ff', 0.82, 0.9);
+      });
+    }
+
+    /* --------------------------------------------------------- traffico */
+    // Auto e tram sono cotti in tutte le direzioni: a runtime il veicolo
+    // sceglie la sprite in base al proprio orientamento, come il giocatore.
+    for (let m = 0; m < CAR_MODELS.length; m++) {
+      this._job(() => {
+        const set = [];
+        for (let d = 0; d < CAR_DIRS; d++) {
+          const mesh = Metro.buildCar(CAR_MODELS[m].color, CAR_MODELS[m].kind);
+          rotateMeshY(mesh, (d / CAR_DIRS) * Math.PI * 2);
+          set.push(bakeMesh(mesh, { outline: 1.5 }));
+        }
+        A.cars[m] = set;
+      });
+    }
+    for (let k = 0; k < TRAM_DIRS; k += 4) {
+      this._job(() => {
+        for (let d = k; d < Math.min(k + 4, TRAM_DIRS); d++) {
+          const mesh = Metro.buildTram();
+          rotateMeshY(mesh, (d / TRAM_DIRS) * Math.PI * 2);
+          A.trams[d] = bakeMesh(mesh, { outline: 1.6 });
+        }
+      });
+    }
+    this._job(() => {
+      for (let st = 0; st < 3; st++) {
+        A.lights.push(this._bakeProp(Metro.buildTrafficLight(st), 1.5));
+      }
+      A.village.tramStop = this._bakeProp(Metro.buildTramStop(), 1.4);
+      A.village.kiosk = this._bakeProp(Metro.buildKiosk(), 1.6);
     });
 
     /* ------------------------------------------------ arredi della città */

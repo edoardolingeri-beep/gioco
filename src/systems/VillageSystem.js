@@ -211,6 +211,78 @@ const STAGES = [
       { sprite: 'bin', x: 6.2, z: 16.0, shadow: 0.28, solid: true, radius: 0.28 },
     ],
   },
+
+  /* ------------------------------ Fase 5: la metropoli ----------------- */
+
+  /* liv. 14 — il primo grattacielo: la città si mette in moto */
+  {
+    name: 'Metropoli',
+    npcs: 6,
+    props: () => [
+      { sprite: 'cityLamp', x: -2.4, z: -8.6, shadow: 0.3, solid: true, radius: 0.28 },
+      { sprite: 'cityLamp', x: -7.0, z: -9.4, shadow: 0.3, solid: true, radius: 0.28 },
+      { sprite: 'kiosk', x: -1.6, z: -6.6, shadow: 0.8, solid: true, radius: 0.85,
+        poi: { kind: 'work', stopDist: 1.4 } },
+      { sprite: 'bin', x: -3.6, z: -6.8, shadow: 0.28, solid: true, radius: 0.28 },
+    ],
+  },
+
+  /* liv. 15 — la stazione: entra in servizio il tram */
+  {
+    name: 'Metropoli in corsa',
+    npcs: 6,
+    props: () => [
+      { sprite: 'tramStop', x: 13.2, z: -2.0, shadow: 0.24, solid: true, radius: 0.22,
+        poi: { kind: 'work', stopDist: 1.1 } },
+      { sprite: 'tramStop', x: -13.6, z: -6.2, shadow: 0.24, solid: true, radius: 0.22,
+        poi: { kind: 'work', stopDist: 1.1 } },
+      { sprite: 'cityBench', x: 13.8, z: -0.4, shadow: 0.55, solid: true, radius: 0.55,
+        poi: { kind: 'sit', stopDist: 0.85, yaw: Math.PI } },
+      { sprite: 'cityLamp', x: 12.4, z: -4.4, shadow: 0.3, solid: true, radius: 0.28 },
+    ],
+  },
+
+  /* liv. 16 — la torre panoramica */
+  {
+    name: 'Skyline',
+    npcs: 7,
+    haulers: 2,
+    props: () => [
+      { sprite: 'cityLamp', x: 5.0, z: -10.2, shadow: 0.3, solid: true, radius: 0.28 },
+      { sprite: 'kiosk', x: 5.4, z: -8.2, shadow: 0.8, solid: true, radius: 0.85,
+        poi: { kind: 'work', stopDist: 1.4 } },
+      { sprite: 'flowerBed', x: 0.2, z: -9.4, shadow: 0.9 },
+      { sprite: 'cityBench', x: -0.6, z: -7.6, shadow: 0.55, solid: true, radius: 0.55,
+        poi: { kind: 'sit', stopDist: 0.85, yaw: 0 } },
+    ],
+  },
+
+  /* liv. 17 — la fabbrica */
+  {
+    name: 'Metropoli industriale',
+    npcs: 7,
+    haulers: 3,
+    props: () => [
+      { sprite: 'cityLamp', x: -13.0, z: -8.0, shadow: 0.3, solid: true, radius: 0.28 },
+      { sprite: 'bin', x: -13.8, z: -6.4, shadow: 0.28, solid: true, radius: 0.28 },
+      { sprite: 'hedge', x: -18.4, z: -6.0, shadow: 0.75, solid: true, radius: 0.75 },
+    ],
+  },
+
+  /* liv. 18 — l'aeroporto: il gioco è completo */
+  {
+    name: 'Capitale',
+    npcs: 8,
+    haulers: 2,
+    props: () => [
+      { sprite: 'cityLamp', x: 16.6, z: 12.4, shadow: 0.3, solid: true, radius: 0.28 },
+      { sprite: 'cityLamp', x: 22.4, z: 12.6, shadow: 0.3, solid: true, radius: 0.28 },
+      { sprite: 'cityBench', x: 17.6, z: 11.0, shadow: 0.55, solid: true, radius: 0.55,
+        poi: { kind: 'sit', stopDist: 0.85, yaw: Math.PI } },
+      { sprite: 'kiosk', x: 21.2, z: 10.8, shadow: 0.8, solid: true, radius: 0.85,
+        poi: { kind: 'work', stopDist: 1.4 } },
+    ],
+  },
 ];
 
 export class VillageSystem {

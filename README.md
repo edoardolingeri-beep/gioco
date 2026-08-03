@@ -9,7 +9,7 @@ libreria di gioco) e impacchettato come **app nativa** con Capacitor.
 
 ---
 
-## Stato: Fasi 1-4 complete ✅
+## Stato: gioco completo — tutte e 5 le fasi ✅
 
 La prima fase è quella che il resto del gioco userà come fondamenta, quindi è
 stata rifinita fino in fondo prima di proseguire:
@@ -76,8 +76,23 @@ stata rifinita fino in fondo prima di proseguire:
 | Fino a 46 abitanti, con LOD di simulazione | ✅ |
 | 14 potenziamenti, 13 costruzioni, 13 livelli di crescita | ✅ |
 
-La Fase 5 (metropoli: grattacieli, auto, semafori, tram) è descritta in fondo:
-l'architettura è già predisposta.
+### Fase 5 — La metropoli
+
+| Funzionalità | Stato |
+|---|---|
+| **Grattacieli** con fasce di vetro e coronamenti | ✅ |
+| **Traffico**: auto che circolano, frenano e fanno la coda | ✅ |
+| **Semafori** con ciclo verde/giallo/rosso a gruppi opposti | ✅ |
+| Le auto **frenano e suonano** per il giocatore, non lo investono | ✅ |
+| **Tram** su binari con traversine e rotaie | ✅ |
+| **Stazione**, **fabbrica** con ciminiere fumanti, **aeroporto** | ✅ |
+| Chioschi, fermate, arredo urbano | ✅ |
+| Fino a 54 abitanti distribuiti sui marciapiedi | ✅ |
+| 16 potenziamenti, 18 costruzioni, 18 livelli di crescita | ✅ |
+
+Il percorso completo va dalla prima capanna nella radura alla capitale con
+l'aeroporto: cinque fasi, ognuna che trasforma il mondo sotto gli occhi di chi
+gioca.
 
 ---
 
@@ -201,6 +216,7 @@ src/
     village.js             segheria, cava, casa, magazzino e arredi
     town.js                ponte, mulino, fucina, vene di ferro, carri
     city.js                municipio, botteghe, banca, ospedale, fontana, oro
+    metro.js               grattacieli, stazione, fabbrica, aeroporto, veicoli
     enemies.js             rig animato del lupo
 
   world/
@@ -215,6 +231,7 @@ src/
     MerchantEntity.js  WorkbenchEntity.js
     NPCEntity.js                          abitanti con routine
     WolfEntity.js                         nemici
+    VehicleEntity.js                      auto e tram sul loro percorso
     GrowProp.js                           arredi che spuntano dal terreno
 
   systems/                 meccaniche trasversali
@@ -228,6 +245,7 @@ src/
     QualityManager.js      risoluzione adattiva in base agli FPS
     VillageSystem.js       livelli del villaggio ed evoluzione del mondo
     EnemySpawner.js        ondate di nemici, con zone sicure
+    TrafficSystem.js       anelli stradali, semafori, auto e tram
 
   ui/
     HUD.js                 indicatori, toast, pannello opzioni (DOM)
@@ -245,6 +263,7 @@ tools/                     strumenti di sviluppo (Playwright)
     phase2-test.cjs        verifica di pietra, cantieri, villaggio, lupi
     phase3-test.cjs        verifica di fiume, ponte, ferro, mulino, strade
     phase4-test.cjs        verifica di oro, città, asfalto, parco, banca
+    phase5-test.cjs        verifica di traffico, semafori, tram, metropoli
     screenshots.cjs        cattura i momenti chiave
     phase2-shots.cjs       porta la partita a villaggio completo
     perf.cjs               profila il costo del frame
@@ -302,13 +321,18 @@ Altre scelte pensate per il telefono:
 
 ## Roadmap
 
-L'architettura è già pronta per crescere: ogni fase aggiunge moduli senza
-riscrivere quelli esistenti.
+Il gioco copre l'intero arco previsto: dalla foresta selvaggia alla metropoli.
+Ogni fase ha aggiunto moduli senza riscrivere quelli esistenti, e i salvataggi
+sono rimasti compatibili dalla prima all'ultima.
 
-- **Fase 5 — Metropoli**: grattacieli, auto, semafori, tram.
-- **Trasversali**: nuovi biomi ai bordi della mappa (montagne, deserto,
-  ghiacciaio, vulcano, isole), nemici con IA, combattimento automatico,
-  potenziamenti avanzati.
+Le cinque fasi previste sono completate. Gli sviluppi naturali da qui:
+
+- **Nuovi biomi** ai bordi della mappa: montagne, deserto, ghiacciaio,
+  vulcano, isole, ognuno con materiali, animali e costruzioni esclusive.
+- **Altri nemici** (goblin, scheletri, orsi) con comportamenti diversi dal
+  lupo: chi ruba e scappa, chi attacca in gruppo.
+- **Porto e navi**, sfruttando il sistema di percorsi già usato per il tram.
+- **Ciclo giorno/notte**, con i lampioni che si accendono davvero.
 
 Il motore dell'evoluzione è già in funzione: `VillageSystem` tiene un livello
 che sale a ogni costruzione completata, e ogni livello elenca in `STAGES` gli

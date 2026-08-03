@@ -254,9 +254,93 @@ Object.assign(BUILDINGS, {
   },
 });
 
+/* ------------------------------------------------------------- Fase 5 */
+
+Object.assign(BUILDINGS, {
+  /** Il primo grattacielo: da qui in poi la città ha un traffico vero. */
+  tower: {
+    id: 'tower',
+    name: 'Grattacielo',
+    sprite: 'skyscraperA',
+    requires: 'hospital',
+    unlockCost: 2600,
+    cost: { stone: 380, iron: 220, gold: 60 },
+    radius: 1.9,
+    zone: 3.4,
+    spot: { x: -4.6, z: -11.4 },
+    perk: 'La città si mette in moto',
+    onComplete: (game) => game.traffic.enableRoads(),
+    onRestore: (game) => game.traffic.enableRoads(),
+  },
+
+  station: {
+    id: 'station',
+    name: 'Stazione',
+    sprite: 'station',
+    requires: 'tower',
+    unlockCost: 3200,
+    cost: { wood: 200, stone: 340, iron: 260 },
+    radius: 2.2,
+    zone: 3.6,
+    spot: { x: 15.6, z: -2.4 },
+    perk: 'Entra in servizio il tram',
+    onComplete: (game) => game.traffic.enableTram(),
+    onRestore: (game) => game.traffic.enableTram(),
+  },
+
+  tower2: {
+    id: 'tower2',
+    name: 'Torre Panoramica',
+    sprite: 'skyscraperB',
+    requires: 'station',
+    unlockCost: 4200,
+    cost: { stone: 420, iron: 320, gold: 90 },
+    radius: 1.8,
+    zone: 3.2,
+    spot: { x: 2.6, z: -12.6 },
+    perk: 'Il simbolo della metropoli',
+  },
+
+  factory: {
+    id: 'factory',
+    name: 'Fabbrica',
+    sprite: 'factory',
+    requires: 'tower2',
+    unlockCost: 5200,
+    cost: { stone: 460, iron: 400, gold: 80 },
+    radius: 2.6,
+    zone: 3.8,
+    spot: { x: -16.4, z: -9.6 },
+    perk: '+2 di ogni risorsa raccolta',
+    effect: (s) => { s.logBonus += 2; s.stoneBonus += 2; s.ironBonus += 1; },
+    /** Le ciminiere fumano di continuo: la città al lavoro. */
+    overlay: (r, game, self) => {
+      if (Math.random() < 0.22) {
+        const x = self.x + (Math.random() < 0.5 ? 1.47 : 0.37);
+        game.fx.puff(x, 4.9, self.z - 0.6, 1, 'rgba(186,190,198,0.55)', 0.3, 0.34);
+      }
+    },
+  },
+
+  airport: {
+    id: 'airport',
+    name: 'Aeroporto',
+    sprite: 'airport',
+    requires: 'factory',
+    unlockCost: 7000,
+    cost: { stone: 520, iron: 480, gold: 160 },
+    radius: 3.2,
+    zone: 4.4,
+    spot: { x: 19.5, z: 14.5 },
+    perk: 'La metropoli è completa',
+    effect: (s) => { s.income += 12; s.sellBonus += 0.8; },
+  },
+});
+
 /** Ordine di comparsa dei cantieri. */
 export const BUILD_ORDER = [
   'hut', 'sawmill', 'quarry', 'house', 'warehouse',    // Fase 1-2
   'bridge', 'mill', 'smithy',                           // Fase 3
   'townhall', 'shops', 'park', 'bank', 'hospital',      // Fase 4
+  'tower', 'station', 'tower2', 'factory', 'airport',   // Fase 5
 ];

@@ -128,7 +128,24 @@ export const CFG = {
   /* -------------------------------------------------------------- abitanti */
   npc: {
     speed: 1.85,
-    maxCount: 46,
+    maxCount: 54,
+  },
+
+  /* ------------------------------------------------------------- traffico */
+  traffic: {
+    // Anello percorso dai veicoli attorno al centro città.
+    ringRadius: 12.5,
+    ringPoints: 12,
+    carSpeed: 4.2,
+    maxCars: 8,
+    // Linea del tram: un secondo anello, più largo e più lento.
+    tramRadius: 17.5,
+    tramPoints: 14,
+    tramSpeed: 3.2,
+    maxTrams: 2,
+    // Semafori
+    lightCycle: 11,       // secondi per un ciclo completo
+    stopDistance: 2.2,    // distanza a cui il veicolo frena
   },
 
   /* ---------------------------------------------------------------- nemici */
@@ -270,5 +287,15 @@ export const UPGRADES = [
     id: 'bag4', label: 'Furgone a Mano', desc: '+16 di capienza',
     cost: 1600, icon: '🚚',
     apply: (s) => { s.bagLevel = 5; },
+  },
+  {
+    id: 'boots3', label: 'Scarpe da Città', desc: 'Corri come un tram',
+    cost: 2200, icon: '👟',
+    apply: (s) => { s.bootsLevel = 4; },
+  },
+  {
+    id: 'armor3', label: 'Giubbotto Tecnico', desc: 'Praticamente invincibile',
+    cost: 3000, icon: '🦺',
+    apply: (s) => { s.armorLevel = 4; },
   },
 ];

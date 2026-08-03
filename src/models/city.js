@@ -445,40 +445,46 @@ export function buildFountain() {
  */
 export function buildFountainJets(phase = 0) {
   const g = M.mesh();
-  const n = 10;
+  const n = 8;
   const light = mixRGB(PAL.waterA, PAL.white, 0.55);
-  const mid = mixRGB(PAL.waterA, PAL.white, 0.3);
+  const mid = mixRGB(PAL.waterA, PAL.white, 0.28);
 
   for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2 + phase * 0.6;
+    const a = (i / n) * Math.PI * 2 + phase * 0.5;
     const t = (phase + i / n) % 1;
+    const pulse = 0.85 + Math.sin(t * Math.PI * 2) * 0.15;
 
-    // Archetto d'acqua: tre segmenti che scendono verso la vasca. Un unico
-    // cilindro verticale sembrerebbe uno stecco, non uno spruzzo.
-    for (let k = 0; k < 3; k++) {
-      const kt = k / 2;
-      const r = 0.46 + kt * 0.52;
-      const y = 1.62 + Math.sin(t * Math.PI) * 0.16 - kt * kt * 0.62;
-      const sz = 0.15 - k * 0.03;
-      const drop = M.box(sz, sz * 1.5, sz, k === 0 ? light : mid, { taper: 0.35 });
-      M.translate(drop, Math.cos(a) * r, y, Math.sin(a) * r);
-      M.merge(g, drop);
-    }
+    /*
+     * Un getto è UN elemento allungato e inclinato verso l'esterno, non una
+     * fila di cubetti: spezzettarlo lo faceva sembrare coriandoli.
+     */
+    const jetLen = 1.15 * pulse;
+    const jet = M.box(0.14, jetLen, 0.14, light, { taper: 0.45 });
+    M.rotZ(jet, -0.72);                       // inclinato verso fuori
+    M.rotY(jet, -a);
+    M.translate(jet,
+      Math.cos(a) * 0.5, 1.28, Math.sin(a) * 0.5);
+    M.merge(g, jet);
 
-    // increspature sul pelo dell'acqua
-    if (i % 2 === 0) {
-      const ring = M.box(0.2, 0.04, 0.14, light);
-      M.translate(ring, Math.cos(a) * 1.24, 0.44, Math.sin(a) * 1.24);
-      M.merge(g, ring);
-    }
+    // ricaduta nella vasca: una colonnina corta che pesca nell'acqua
+    const fall = M.box(0.11, 0.5 * pulse, 0.11, mid, { taper: 0.4 });
+    M.translate(fall, Math.cos(a) * 1.12, 0.5, Math.sin(a) * 1.12);
+    M.merge(g, fall);
+
+    // increspatura sul pelo dell'acqua
+    const ripple = M.box(0.26, 0.04, 0.18, light);
+    M.rotY(ripple, -a);
+    M.translate(ripple, Math.cos(a) * 1.12, 0.44, Math.sin(a) * 1.12);
+    M.merge(g, ripple);
   }
 
-  // zampillo centrale, corto e panciuto
-  const jet = M.cylinder(0.13, 0.05, 0.34 + Math.sin(phase * Math.PI * 2) * 0.1, 6, light);
-  M.translate(jet, 0, 1.88, 0);
+  // zampillo centrale
+  const h = 0.5 + Math.sin(phase * Math.PI * 2) * 0.14;
+  const jet = M.cylinder(0.12, 0.05, h, 6, light);
+  M.translate(jet, 0, 1.86, 0);
   M.merge(g, jet);
-  const crown = M.sphere(0.12, 6, 4, light);
-  M.translate(crown, 0, 2.24 + Math.sin(phase * Math.PI * 2) * 0.08, 0);
+  const crown = M.sphere(0.14, 6, 4, light);
+  M.translate(crown, 0, 1.86 + h + 0.06, 0);
   M.merge(g, crown);
   return g;
 }

@@ -222,10 +222,54 @@ export class Terrain {
           len: 0.95,
           w: 0.14,
           angle: Math.atan2(dz * SIN_P, dx),
+          color: PAL.roadLine,
         });
       }
       this._decalDirty = true;
     }
+  }
+
+  /**
+   * Binari del tram: traversine trasversali e due rotaie continue.
+   *
+   * Come per la segnaletica sono rettangoli orientati, non macchie: una
+   * rotaia deve essere una linea dritta, non una chiazza sfumata.
+   */
+  addRails(x1, z1, x2, z2) {
+    const dx = x2 - x1, dz = z2 - z1;
+    const len = Math.hypot(dx, dz);
+    if (len < 0.01) return;
+    const angle = Math.atan2(dz * SIN_P, dx);
+    // versore laterale nel piano di terra
+    const nx = -dz / len, nz = dx / len;
+
+    // massicciata
+    this.addDecal((x1 + x2) / 2, (z1 + z2) / 2, len * 0.55, PAL.sleeper, 0.35);
+
+    // traversine
+    const ties = Math.max(1, Math.round(len / 0.85));
+    for (let i = 0; i < ties; i++) {
+      const t = (i + 0.5) / ties;
+      this.stripes.push({
+        x: x1 + dx * t, z: z1 + dz * t,
+        len: 0.28, w: 1.5,
+        angle, color: PAL.sleeper,
+      });
+    }
+    // rotaie: due file continue di segmenti
+    const segs = Math.max(1, Math.round(len / 1.1));
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < segs; i++) {
+        const t = (i + 0.5) / segs;
+        this.stripes.push({
+          x: x1 + dx * t + nx * side * 0.52,
+          z: z1 + dz * t + nz * side * 0.52,
+          len: (len / segs) * 1.08, w: 0.12,
+          angle, color: PAL.rail,
+        });
+      }
+    }
+    this._decalDirty = true;
   }
 
   /** Disegna terreno e decalcomanie. Il ctx è già in coordinate schermo. */
@@ -321,12 +365,16 @@ export class Terrain {
 
     // segnaletica sopra l'asfalto
     if (this.stripes.length) {
-      ctx.fillStyle = rgbToCss(PAL.roadLine);
-      ctx.globalAlpha = 0.85;
+      ctx.globalAlpha = 0.88;
+      let lastColor = null;
       for (const st of this.stripes) {
         const sx = st.x * ppu - c.ox;
         const sy = st.z * SIN_P * ppu - c.oy;
         if (sx < -60 || sx > w + 60 || sy < -60 || sy > h + 60) continue;
+        if (st.color !== lastColor) {
+          lastColor = st.color;
+          ctx.fillStyle = rgbToCss(st.color ?? PAL.roadLine);
+        }
         const L = st.len * ppu, W2 = st.w * ppu * SIN_P;
         ctx.save();
         ctx.translate(sx, sy);
