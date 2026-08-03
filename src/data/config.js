@@ -134,7 +134,10 @@ export const CFG = {
   /* -------------------------------------------------------------- abitanti */
   npc: {
     speed: 1.85,
-    maxCount: 54,
+    // Era 54: con tutti a girovagare fra un punto di interesse e l'altro,
+    // le strade sembravano più affollate del dovuto. Meno abitanti, e chi
+    // c'è si ferma più a lungo (vedi NPCEntity._pickActivity).
+    maxCount: 40,
   },
 
   /* ------------------------------------------------------------- traffico */

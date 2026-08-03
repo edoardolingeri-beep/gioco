@@ -496,6 +496,23 @@ lo stesso motivo per cui, dalla scorsa modifica, anche il colpo di
 boscaioli e minatori tace se sei lontano: un reddito passivo non deve
 sentirsi ovunque sulla mappa.
 
+**Ogni risorsa ha il suo operaio**, non solo legno e pietra: il minatore di
+ferro (fucina) e il cercatore d'oro (banca) seguono la stessa `WorkerSystem`
+generica di boscaiolo e minatore — stesse due leve, stesso nastro
+trasportatore, stesso tutto. L'unica differenza reale è dove compare il
+cartello: ferro e oro si trovano solo ben oltre il fiume (`World.js`), così
+lontano dalla fucina e dalla banca (che restano a sud) che un cartello
+accanto all'edificio non avrebbe mai raggiunto una vena. Per questi due,
+`WORKER_TYPES` usa una posizione fissa nella zona giusta (`stationSpot`)
+invece dell'offset dall'edificio (`offX`/`offZ`) usato da boscaiolo e
+minatore — `WorkerSystem.registerStation` sceglie l'uno o l'altro a seconda
+di quale il tipo di operaio definisce.
+
+Le descrizioni nel pannello del negozio vanno a capo invece di troncarsi
+con i puntini di sospensione — con quattro operai anziché due, e un testo
+non sempre breve ("Il cartello accumula di più prima di riempirsi"),
+tagliarle a mezza frase le rendeva illeggibili.
+
 ### Un recinto quadrato, non un cerchio
 
 La prima versione era un anello di 44 tratti, ognuno orientato con la sprite
@@ -572,6 +589,53 @@ livello normale, ripete la stessa pulizia di alberi vista sopra sulla
 fascia appena inglobata, e persino la zona sicura dei nemici
 (`EnemySpawner`) segue il recinto invece di restare ferma alla misura
 base — allargare le mura non deve far comparire un lupo dentro casa.
+Il recinto resta comunque legato alla fase "villaggio": quando il Municipio
+fa scattare la fase "Città" (`stage.removeFence`), la staccionata si smonta
+lo stesso, allargata o no — è voluto (`_removeFence`, la città ha superato
+il vecchio perimetro), non un effetto collaterale dell'allargamento.
+
+I pannelli sopra edifici, cartelli, banco e mercante compaiono già da un
+bel po' di distanza (il margine oltre la loro `zone` di interazione), pensato
+per un villaggio con poche cose vicine fra loro. Con più cartelli, cantieri
+e arredi ravvicinati (specie dopo aver assunto operai per ogni risorsa, vedi
+sotto) più pannelli finivano visibili insieme, accavallati — si legge come
+confusione, non come informazione. Il margine è più stretto ora (da +6/+5.5
+a +3 unità in `BuildingEntity`, `WorkbenchEntity`, `MerchantEntity`,
+`HireStationEntity`): i pannelli continuano a comparire dolcemente
+avvicinandosi, solo da più vicino.
+
+### Operai che aspettano invece di sembrare bloccati, e strade meno affollate
+
+Due lamentele diverse, radice simile: "a volte sembrano bloccati" (gli
+operai) e "troppa gente per strada" (gli abitanti) — in entrambi i casi
+qualcuno stava correttamente *aspettando*, ma niente lo comunicava.
+
+Spostare il cartello di boscaiolo e minatore verso il centro del villaggio
+(vedi sopra, contro l'uscire dal cancello per sbaglio) li aveva anche
+allontanati dal bosco e dalla cava vera e propria: lo stesso raggio di
+lavoro copriva meno alberi/massi di prima, quindi capitava più spesso che
+un operaio restasse fermo ad aspettare che qualcosa ricrescesse nel suo
+raggio — non bloccato, ma sembrava tale. Il raggio di boscaiolo e minatore
+è più largo apposta (13 → 17) per compensare lo spostamento.
+
+Gli abitanti, invece, sceglievano una nuova meta a caso ogni 4-9 secondi
+qualunque fosse l'attività appena finita: il risultato era una popolazione
+quasi sempre in cammino da qualche parte, che con `maxCount` a 54 si legge
+come una strada perennemente affollata. Tre correzioni:
+- `NPCEntity._pickActivity` preferisce ora una panchina libera quando c'è,
+  e chi si siede ci resta molto più a lungo (16-30s contro i 4-9 di prima)
+  — un abitante seduto non è "per strada".
+- Ogni punto di interesse tiene un `occupiedBy`, così due abitanti non
+  puntano mai alla stessa panchina: prima capitava, e uno dei due finiva
+  "invisibilmente" sovrapposto all'altro. Se in un dato momento tutti i
+  punti liberi sono occupati, l'abitante si ferma lì dov'è per un attimo
+  invece di rubare il posto a chi lo sta già usando.
+- `CFG.npc.maxCount` è sceso da 54 a 40.
+
+Il gioco non ha spazi interni (è un motore 2.5D solo esterni): "farli
+entrare in casa" non è modellabile senza una nuova meccanica apposta —
+farli sedere più a lungo, con meno persone in giro, è la versione
+raggiungibile della stessa idea.
 
 ### Un secondo nemico, e la prima difesa che non serve azionare
 

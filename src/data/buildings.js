@@ -192,10 +192,14 @@ Object.assign(BUILDINGS, {
       game.world.addLight(b.x + 0.95, 0.9, b.z + 2.0, {
         radius: 1.7, alpha: 0.85, flicker: true,
       });
+      game.workers.registerStation('ironminer', b);
     },
-    onRestore: (game, b) => game.world.addLight(b.x + 0.95, 0.9, b.z + 2.0, {
-      radius: 1.7, alpha: 0.85, flicker: true,
-    }),
+    onRestore: (game, b) => {
+      game.world.addLight(b.x + 0.95, 0.9, b.z + 2.0, {
+        radius: 1.7, alpha: 0.85, flicker: true,
+      });
+      game.workers.registerStation('ironminer', b);
+    },
     /** Scintille e bagliore dalla forgia sempre accesa. */
     overlay: (r, game, self) => {
       if (Math.random() < 0.06) {
@@ -275,6 +279,8 @@ Object.assign(BUILDINGS, {
     spot: { x: -8.2, z: 14.8 },
     perk: 'Rendita in monete, +1 oro per filone',
     effect: (s) => { s.income += 8; s.goldBonus += 1; },
+    onComplete: (game) => game.workers.registerStation('goldminer', game.world.buildings.bank),
+    onRestore: (game) => game.workers.registerStation('goldminer', game.world.buildings.bank),
   },
 
   hospital: {

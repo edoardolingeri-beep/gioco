@@ -107,15 +107,18 @@ export class BuildingEntity extends Entity {
     const inside = d2 < this.zone * this.zone;
 
     if (this.state === BUILD_STATE.BLUEPRINT && !this.unlocked) {
-      this.panelT = damp(this.panelT, d2 < (this.zone + 6) ** 2 ? 1 : 0, 7, dt);
+      this.panelT = damp(this.panelT, d2 < (this.zone + 3) ** 2 ? 1 : 0, 7, dt);
       this._updateUnlock(dt, game, inside);
       return;
     }
 
     if (this.state === BUILD_STATE.BLUEPRINT) {
       // Il pannello compare solo quando sei nei paraggi: da lontano
-      // l'inquadratura resta pulita.
-      const want = d2 < (this.zone + 6) ** 2 ? 1 : 0;
+      // l'inquadratura resta pulita. Il margine (+3, era +6) è stato
+      // ristretto apposta: con più edifici/cartelli vicini fra loro i
+      // pannelli restavano visibili tutti insieme, un accavallarsi che si
+      // legge come confusione invece che come informazione.
+      const want = d2 < (this.zone + 3) ** 2 ? 1 : 0;
       this.panelT = damp(this.panelT, want, 7, dt);
 
       if (inside && !this.playerInside) game.bus.emit('zone:enter', this);

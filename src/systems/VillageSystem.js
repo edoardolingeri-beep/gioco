@@ -328,7 +328,9 @@ export class VillageSystem {
 
   /** Registra un punto di interesse per gli abitanti. */
   addPOI(x, z, kind = 'work', stopDist = 1.2, yaw = null) {
-    this.pointsOfInterest.push({ x, z, kind, stopDist, yaw });
+    // `occupiedBy` evita che più abitanti scelgano la stessa panchina:
+    // vedi NPCEntity._pickActivity.
+    this.pointsOfInterest.push({ x, z, kind, stopDist, yaw, occupiedBy: null });
   }
 
   /**

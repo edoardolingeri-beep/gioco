@@ -359,9 +359,8 @@
   font-size: 11px;
   font-weight: 600;
   opacity: .6;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.3;
 }
 
 .shop-buy {

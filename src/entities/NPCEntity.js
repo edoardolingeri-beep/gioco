@@ -95,12 +95,43 @@ export class NPCEntity extends Entity {
     }
   }
 
-  /** Sceglie la prossima attività fra i punti di interesse del villaggio. */
+  /**
+   * Sceglie la prossima attività fra i punti di interesse del villaggio.
+   *
+   * Con la popolazione cresciuta, lasciare tutti a girovagare in
+   * continuazione (4-9 secondi fermi, poi di nuovo per strada) faceva
+   * sembrare il villaggio molto più affollato di quanto fosse davvero.
+   * Ora si preferisce una panchina libera quando c'è (`occupiedBy` evita
+   * che più abitanti puntino alla stessa, sovrapponendosi), e chi si siede
+   * ci resta più a lungo — vedi `_go`.
+   */
   _pickActivity(game) {
+    // libera il posto che stava occupando, se lo stava occupando
+    if (this.target && this.target.occupiedBy === this) this.target.occupiedBy = null;
+
     const poi = game.village.pointsOfInterest;
     if (!poi.length) { this._idle(0); this.actTimer = 2; return; }
 
-    const spot = poi[(Math.random() * poi.length) | 0];
+    let spot = null;
+    if (fxRand.chance(0.55)) {
+      const freeSit = poi.filter((p) => p.kind === 'sit' && !p.occupiedBy);
+      if (freeSit.length) spot = freeSit[(Math.random() * freeSit.length) | 0];
+    }
+    if (!spot) {
+      const free = poi.filter((p) => !p.occupiedBy);
+      const pool = free.length ? free : poi;
+      spot = pool[(Math.random() * pool.length) | 0];
+    }
+
+    // Se è libero lo prenota subito (prima ancora di arrivarci, altrimenti
+    // due abitanti potrebbero puntare alla stessa panchina nello stesso
+    // istante). Se non lo è — il ripiego, quando tutto è occupato — ci si
+    // dirige comunque senza prenotarlo: un abitante deve sempre potersi
+    // muovere (anche solo per attraversare un cancello ed entrare in
+    // paese), non restare fermo ad aspettare un posto libero all'infinito.
+    // `_go` controlla all'arrivo se il posto è ancora suo.
+    if (!spot.occupiedBy) spot.occupiedBy = this;
+
     this.target = spot;
     this.act = ACT.GO;
     this.actTimer = 22;   // sicurezza: non restare bloccato per sempre
@@ -131,15 +162,20 @@ export class NPCEntity extends Entity {
 
     const d = dist(this.x, this.z, aimX, aimZ);
     if (arriving && (d < (t.stopDist ?? 1.1) || this.actTimer <= 0)) {
-      // arrivato: fa ciò per cui quel punto esiste
-      this.act = t.kind === 'sit' ? ACT.SIT : t.kind === 'work' ? ACT.WORK : ACT.IDLE;
-      this.actTimer = fxRand.range(4, 9);
+      // arrivato: fa ciò per cui quel punto esiste — a meno che qualcun
+      // altro non l'abbia occupato nel frattempo (il ripiego "tutto
+      // occupato" in _pickActivity non prenota): in quel caso si ferma lì
+      // vicino invece di sovrapporsi a chi c'è già. Chi si siede davvero ci
+      // resta parecchio di più: è quello che svuota le strade.
+      const claimed = t.occupiedBy === this;
+      this.act = !claimed ? ACT.IDLE : t.kind === 'sit' ? ACT.SIT : t.kind === 'work' ? ACT.WORK : ACT.IDLE;
+      this.actTimer = (claimed && t.kind === 'sit') ? fxRand.range(16, 30) : fxRand.range(4, 9);
       this.vx = this.vz = 0;
       if (this.act === ACT.WORK && Math.random() < 0.4) {
         this.bubble = WORK_MARKS[(Math.random() * WORK_MARKS.length) | 0];
         this.bubbleT = 2.5;
       }
-      if (t.yaw != null) this.yaw = t.yaw;
+      if (claimed && t.yaw != null) this.yaw = t.yaw;
       return;
     }
     if (!arriving && this.actTimer <= 0) {

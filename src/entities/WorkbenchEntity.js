@@ -36,7 +36,7 @@ export class WorkbenchEntity extends Entity {
     const p = game.player;
     const d2 = (p.x - this.x) ** 2 + (p.z - this.z) ** 2;
     const inside = d2 < this.zone * this.zone;
-    this.panelT = damp(this.panelT, d2 < (this.zone + 6) ** 2 ? 1 : 0, 7, dt);
+    this.panelT = damp(this.panelT, d2 < (this.zone + 3) ** 2 ? 1 : 0, 7, dt);
 
     if (inside && !this.playerInside) game.bus.emit('zone:enter', this);
     this.playerInside = inside;

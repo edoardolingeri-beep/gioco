@@ -234,7 +234,7 @@ export class HUD {
       });
     }
 
-    for (const typeId of ['lumberjack', 'miner']) {
+    for (const typeId in WORKER_TYPES) {
       const station = g.workers.stations[typeId];
       if (!station) continue;
       for (const axis of ['yield', 'capacity']) {

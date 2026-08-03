@@ -34,15 +34,18 @@ export class WorkerSystem {
   }
 
   /**
-   * Fa comparire il cartello vicino all'edificio appena finito.
+   * Fa comparire il cartello vicino all'edificio appena finito — o in una
+   * posizione fissa (`def.stationSpot`), per gli operai la cui risorsa non
+   * si trova affatto vicino all'edificio che li sblocca (il ferro e l'oro
+   * sono tutti oltre il fiume, mentre fucina e banca restano a sud).
    * Chiamato sia da `onComplete` (prima volta, con fanfara) sia da
    * `onRestore` (al caricamento, in silenzio) — per questo è idempotente.
    */
   registerStation(typeId, building) {
     if (this.stations[typeId] || !building) return;
     const def = WORKER_TYPES[typeId];
-    const x = building.x + (def.offX ?? 1.6);
-    const z = building.z + (def.offZ ?? 0.7);
+    const x = def.stationSpot ? def.stationSpot.x : building.x + (def.offX ?? 1.6);
+    const z = def.stationSpot ? def.stationSpot.z : building.z + (def.offZ ?? 0.7);
     const station = new HireStationEntity(x, z, def, this);
     station.stock = Math.min(this.stockCap(typeId), this.pendingStock[typeId] ?? 0);
     this.stations[typeId] = station;

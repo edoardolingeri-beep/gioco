@@ -40,7 +40,7 @@ export class MerchantEntity extends Entity {
     const p = game.player;
     const d2 = (p.x - this.x) ** 2 + (p.z - this.z) ** 2;
     const inside = d2 < this.zone * this.zone;
-    const near = d2 < (this.zone + 6) ** 2;
+    const near = d2 < (this.zone + 3) ** 2;
     this.panelT = damp(this.panelT, near ? 1 : 0, 7, dt);
 
     if (inside && !this.playerInside) game.bus.emit('zone:enter', this);
