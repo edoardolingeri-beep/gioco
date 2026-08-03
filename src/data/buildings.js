@@ -114,6 +114,10 @@ Object.assign(BUILDINGS, {
     spot: { x: 1.5, z: 0 },
     onRiver: true,
     solidWhenDone: false,      // ci si cammina sopra
+    // Metà della lunghezza del modello (`buildBridge`, town.js): serve a
+    // BuildingEntity per non far sparire chi cammina sulla metà lontana
+    // dell'impalcato dietro l'ordinamento per profondità (vedi `get depth`).
+    depthSpan: 3.6,
     perk: 'Apre la sponda nord',
     onComplete: (game) => {
       // Il varco è largo quanto l'impalcato: da qui in poi si attraversa.

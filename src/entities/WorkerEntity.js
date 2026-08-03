@@ -24,6 +24,10 @@ import { damp, angleTowards, dist, TAU } from '../core/MathUtils.js';
 
 const STATE = { SEEK: 0, WALK: 1, WORK: 2, RETURN: 3 };
 const NPC_LOOKS_COUNT = 3;   // quante varianti di vestiario esistono per gli NPC
+/** Oltre questa distanza il colpo dell'operaio non si sente più: solo
+ *  ambiente e musica, altrimenti si sente scavare anche dall'altra parte
+ *  del fiume. */
+const SOUND_AUDIBLE_R = 15;
 
 export class WorkerEntity extends Entity {
   /**
@@ -157,7 +161,9 @@ export class WorkerEntity extends Entity {
       const hitY = 0.6;
       game.fx.chips(t.x, hitY, t.z, 4,
         this.def.resource === 'wood' ? 'rgba(196,150,96,1)' : 'rgba(210,214,222,1)', 0.8);
-      (this.def.resource === 'wood' ? game.audio.chop : game.audio.mine).call(game.audio);
+      if (dist(this.x, this.z, game.player.x, game.player.z) < SOUND_AUDIBLE_R) {
+        (this.def.resource === 'wood' ? game.audio.chop : game.audio.mine).call(game.audio);
+      }
     }
 
     if (this.workT >= this.def.workTime) this._harvest(game);

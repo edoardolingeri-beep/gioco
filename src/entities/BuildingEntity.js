@@ -13,6 +13,7 @@ import { Entity } from './Entity.js';
 import { CFG } from '../data/config.js';
 import { RESOURCE_INFO } from '../data/buildings.js';
 import { drawPanel, drawRing } from '../ui/WorldUI.js';
+import { depthOf } from '../render/Projection.js';
 import { clamp, damp, easeOutBack, easeOutCubic } from '../core/MathUtils.js';
 
 export const BUILD_STATE = { BLUEPRINT: 0, RISING: 1, DONE: 2 };
@@ -53,6 +54,21 @@ export class BuildingEntity extends Entity {
 
   /** Punto d'arrivo delle risorse in volo. */
   get deliverY() { return 1.1; }
+
+  /**
+   * Il ponte è ancorato al centro del fiume, ma la sua sprite è lunga
+   * quanto l'intero attraversamento (banda sud → banda nord): ordinandolo
+   * per profondità sul solo centro, chi cammina sulla metà nord (Z più
+   * piccola, quindi "più lontana" per l'algoritmo del pittore) risultava
+   * meno profondo del ponte e finiva disegnato PRIMA — cioè sotto —
+   * sparendo sotto l'impalcato appena superava il centro. `depthSpan`
+   * sposta la chiave di profondità al bordo più lontano della sprite, così
+   * il ponte è sempre "dietro" chiunque ci cammini sopra, ovunque si trovi.
+   */
+  get depth() {
+    const span = this.def.depthSpan ?? 0;
+    return span ? depthOf(0, this.z - span) : depthOf(0, this.z);
+  }
 
   get costTotal() {
     let t = 0; for (const k in this.def.cost) t += this.def.cost[k];

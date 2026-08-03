@@ -347,7 +347,12 @@ export class VillageSystem {
       const sprite = g.assets.village[p.sprite];
       if (!sprite) return;
       const prop = new GrowProp(p.x, p.z, sprite, {
-        solid: p.solid, radius: p.radius, shadow: p.shadow,
+        solid: p.solid,
+        // La sagoma visibile resta quella disegnata (vedi `shadow`, che non
+        // cambia): l'ingombro per le collisioni è più piccolo apposta, o un
+        // villaggio pieno di arredi diventa impossibile da attraversare.
+        radius: p.radius != null ? p.radius * 0.55 : p.radius,
+        shadow: p.shadow,
         scale: p.scale ?? 1, flip: p.flip,
         delay: instant ? 0 : 0.25 + i * 0.22,
         instant, silent: instant,
