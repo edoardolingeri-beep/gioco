@@ -27,7 +27,10 @@ export const WORKER_TYPES = {
     workRadius: 13,      // quanto lontano dal cartello cerca alberi
     workTime: 3.4,        // secondi passati a colpire prima che l'albero cada
     stockCap: 20,         // oltre questo, l'operaio aspetta che tu passi
-    offX: -1.7, offZ: 0.9,
+    // Verso il centro del villaggio, non verso il bosco: il cartello (e la
+    // sua scorta) deve restare dentro il recinto quando questo compare,
+    // altrimenti ritirare il carico significa uscire dalle mura.
+    offX: 1.7, offZ: 0.9,
   },
   miner: {
     id: 'miner',
@@ -41,6 +44,7 @@ export const WORKER_TYPES = {
     workRadius: 13,
     workTime: 3.8,
     stockCap: 20,
-    offX: 1.9, offZ: 0.8,
+    // Idem: verso il centro del villaggio, non verso la cava.
+    offX: -1.9, offZ: -0.8,
   },
 };

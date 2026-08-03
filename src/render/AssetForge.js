@@ -396,7 +396,16 @@ export class AssetForge {
         A.village.fences.push(this._bakeProp(m, 1.5));
       }
       A.village.fence = A.village.fences[0];
-      A.village.gate = this._bakeProp(Village.buildGate(), 1.8);
+      // Anche l'arco del cancello va cotto sia orizzontale che verticale:
+      // usato con un solo orientamento, sui lati est/ovest del recinto
+      // (verticali) restava comunque disegnato per traverso, come una
+      // croce senza senso incastrata nella staccionata.
+      A.village.gates = [0, Math.PI / 2].map((rot) => {
+        const m = Village.buildGate();
+        rotateMeshY(m.mesh, rot);
+        return this._bakeProp(m, 1.8);
+      });
+      A.village.gate = A.village.gates[0];
       A.village.bench = this._bakeProp(Village.buildBench(), 1.5);
     });
     this._job(() => {

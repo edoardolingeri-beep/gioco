@@ -34,9 +34,21 @@ export function drawPanel(ctx, cam, dpr, x, y, z, o) {
   const sy = projectY(y, z) * cam.ppu - cam.sy;
 
   const S = dpr * app;
-  const w = (o.width ?? 132) * S;
   const hasBar = o.max != null;
   const h = (hasBar ? 46 : 30) * S;
+
+  // Il riquadro non ha una larghezza fissa: la calibriamo sul testo vero
+  // (titolo, ed etichetta della barra se c'è), altrimenti un titolo più
+  // lungo del previsto sborda fuori dagli angoli arrotondati — non è
+  // "storto", è solo troppo stretto per quello che ci scriviamo dentro.
+  // `o.width` resta come larghezza minima, per i pannelli con poco testo.
+  ctx.font = `800 ${13 * S}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+  let w = Math.max((o.width ?? 132) * S, ctx.measureText(o.title).width + 28 * S);
+  if (hasBar) {
+    ctx.font = `900 ${11 * S}px system-ui, -apple-system, sans-serif`;
+    const barLabel = `${o.value}/${o.max} ${o.icon ?? ''}`;
+    w = Math.max(w, ctx.measureText(barLabel).width + 28 * S);
+  }
 
   // Il fumetto non deve mai uscire dallo schermo: il riquadro si sposta,
   // la punta resta agganciata all'oggetto.

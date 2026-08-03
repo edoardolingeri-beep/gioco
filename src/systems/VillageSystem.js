@@ -419,7 +419,7 @@ export class VillageSystem {
     const g = this.game;
     const H = CFG.village.fenceRadius;     // ora è il semilato del quadrato
     const fences = g.assets.village.fences;
-    const gate = g.assets.village.gate;
+    const gates = g.assets.village.gates;
     if (!fences) return;
 
     this.fenceHalfExtent = H;
@@ -470,17 +470,21 @@ export class VillageSystem {
       }
     }
 
-    // Le porte vere e proprie: arco, sentiero di terra e due lanterne, così
-    // un varco si riconosce subito anche da lontano — di giorno per il
-    // sentiero, di notte per la luce.
-    if (gate) {
+    // Le porte vere e proprie: arco (orientato come il lato su cui si trova,
+    // altrimenti sui lati est/ovest resterebbe di traverso), sentiero di
+    // terra battuta dal colore acceso e due lanterne — così un varco si
+    // riconosce subito anche da lontano, di giorno per il colore e di notte
+    // per la luce.
+    if (gates) {
       for (const side of sides) {
         const { gx, gz } = side;
-        this.fenceProps.push(g.world.add(new GrowProp(gx, gz, gate, {
+        const arch = gates[side.dir === V_IDX ? 1 : 0];
+        this.fenceProps.push(g.world.add(new GrowProp(gx, gz, arch, {
           solid: false, radius: 0.9, shadow: 0.5,
           delay: instant ? 0 : 1.2, instant, silent: instant,
         }), !instant));
 
+        g.world.terrain.addDecal(gx * 1.06, gz * 1.06, 2.3, PAL.gold, 0.22);
         g.world.terrain.addDecal(gx * 1.06, gz * 1.06, 1.7, PAL.dirt, 0.42);
         this.fenceLights.push(g.world.addLight(gx * 0.9, 1.55, gz * 0.9, {
           radius: 2.3, alpha: 0.62, flicker: true,

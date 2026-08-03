@@ -272,6 +272,14 @@ export function buildWarehouse() {
  * silhouette resta inequivocabile anche a colpo d'occhio. Uno zoccolo di
  * pietra alla base dà peso al recinto: senza, da questa inquadratura
  * inclinata sembra un insieme di stecchini piantati nel prato.
+ *
+ * Il modello è cotto in più orientamenti (`FENCE_DIRS`, vedi AssetForge) per
+ * seguire il perimetro: da una staccionata "di taglio" (il lato verticale
+ * del recinto quadrato, visto quasi di profilo dalla telecamera fissa) le
+ * traverse sottili sparivano quasi del tutto, lasciando solo i cappelli a
+ * punta dei pali — una fila di rombi staccati, non un recinto. Lo spessore
+ * di traverse e pali intermedi è tenuto più corposo apposta: resta un
+ * recinto leggero visto di fronte, ma non svanisce visto di taglio.
  */
 export function buildFence() {
   const g = M.mesh();
@@ -282,21 +290,21 @@ export function buildFence() {
   M.merge(g, footing);
 
   for (const sx of [-1, 1]) {
-    const post = M.box(0.16, 1.04, 0.16, PAL.fenceDark);
+    const post = M.box(0.2, 1.04, 0.2, PAL.fenceDark);
     M.translate(post, sx * 0.62, 0.06, 0);
     M.merge(g, post);
     // punta piramidale
-    const tip = M.cone(0.12, 0.18, 4, PAL.fence);
+    const tip = M.cone(0.14, 0.18, 4, PAL.fence);
     M.translate(tip, sx * 0.62, 1.1, 0);
     M.merge(g, tip);
   }
   for (const y of [0.34, 0.62, 0.9]) {
-    const rail = M.box(1.36, 0.08, 0.06, PAL.fence);
+    const rail = M.box(1.36, 0.08, 0.2, PAL.fence);
     M.translate(rail, 0, y, 0);
     M.merge(g, rail);
   }
-  // pali intermedi, sottili
-  const mid = M.box(0.1, 0.94, 0.1, PAL.fenceDark);
+  // pali intermedi
+  const mid = M.box(0.18, 0.94, 0.18, PAL.fenceDark);
   M.translate(mid, 0, 0.06, 0);
   M.merge(g, mid);
   return { mesh: g, height: 1.28, radius: 0.7 };
