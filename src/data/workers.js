@@ -10,14 +10,17 @@
  *
  * Un operaio NON consegna da solo: accumula al cartello (fino alla capienza
  * del suo magazzino) e tocca al giocatore passare a ritirare — è lui che
- * deve ancora portarlo a un cantiere o al mercante. Un nastro trasportatore,
- * in una fase successiva del gioco, potrà automatizzare anche quest'ultimo
- * tratto.
+ * deve ancora portarlo a un cantiere o al mercante. A un certo punto però
+ * si può comprare il nastro trasportatore (`conveyor`): un capostipite
+ * riservato a chi ha già portato resa e magazzino al livello massimo, che
+ * vende da solo la scorta per monete, senza bisogno di passare — vedi
+ * `WorkerSystem.buyConveyor`.
  *
  * `upgrades.yield` e `upgrades.capacity` sono le due leve comprabili dal
  * negozio (vedi `WorkerSystem.buyUpgrade`): quanta risorsa porta a ogni
  * consegna, e quanto grande è il magazzino prima che l'operaio debba
- * aspettare. Ogni livello costa `cost * growth^livelloGiàComprato`.
+ * aspettare. Ogni livello costa `cost * growth^livelloGiàComprato`, fino a
+ * `maxLevel`.
  */
 
 export const WORKER_TYPES = {
@@ -39,12 +42,16 @@ export const WORKER_TYPES = {
     upgrades: {
       yield: {
         label: 'Resa del boscaiolo', desc: 'Più tronchi per ogni consegna',
-        base: 1, step: 1, cost: 150, growth: 2.3, maxLevel: 4,
+        base: 1, step: 1, cost: 130, growth: 1.42, maxLevel: 10,
       },
       capacity: {
         label: 'Magazzino del boscaiolo', desc: 'Il cartello accumula di più prima di riempirsi',
-        base: 20, step: 15, cost: 120, growth: 2.0, maxLevel: 4,
+        base: 20, step: 15, cost: 100, growth: 1.36, maxLevel: 10,
       },
+    },
+    conveyor: {
+      label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
+      cost: 6000,
     },
   },
   miner: {
@@ -63,12 +70,16 @@ export const WORKER_TYPES = {
     upgrades: {
       yield: {
         label: 'Resa del minatore', desc: 'Più pietra per ogni consegna',
-        base: 1, step: 1, cost: 190, growth: 2.3, maxLevel: 4,
+        base: 1, step: 1, cost: 170, growth: 1.42, maxLevel: 10,
       },
       capacity: {
         label: 'Magazzino del minatore', desc: 'Il cartello accumula di più prima di riempirsi',
-        base: 20, step: 15, cost: 150, growth: 2.0, maxLevel: 4,
+        base: 20, step: 15, cost: 130, growth: 1.36, maxLevel: 10,
       },
+    },
+    conveyor: {
+      label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
+      cost: 7500,
     },
   },
 };

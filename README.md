@@ -475,10 +475,26 @@ può comprare in questo momento: il prossimo potenziamento del personaggio
 (la stessa coda in `UPGRADES`, config.js) più, per ogni operaio già
 assunto, due leve indipendenti — `yield` (quanta risorsa porta a ogni
 consegna) e `capacity` (la capienza del magazzino) — definite in
-`data/workers.js` e gestite da `WorkerSystem.buyUpgrade`. Ogni livello
-costa `cost × growth^livelliGiàComprati`, fino a un tetto (`maxLevel`).
-`WorkbenchEntity.buy()` è lo stesso metodo chiamato sia dal banco fisico
-sia dal pulsante: un solo percorso d'acquisto, due modi di arrivarci.
+`data/workers.js` e gestite da `WorkerSystem.buyUpgrade`. Ogni riga mostra
+il livello attuale ("Lv 3/10"): dieci gradini per leva, ognuno più caro del
+precedente (`cost × growth^livelliGiàComprati`). `WorkbenchEntity.buy()` è
+lo stesso metodo chiamato sia dal banco fisico sia dal pulsante: un solo
+percorso d'acquisto, due modi di arrivarci.
+
+**Il nastro trasportatore** è il traguardo in fondo a quella progressione,
+non una tappa come le altre: compare nel negozio solo quando resa e
+magazzino di un operaio sono *entrambi* già al livello massimo
+(`WorkerSystem.conveyorReady`), costa una cifra pensata per essere l'ultimo
+grande acquisto di quell'operaio, e una volta comprato (`buyConveyor`)
+cambia comportamento al cartello: `HireStationEntity` smette di aspettare
+che il giocatore passi a ritirare e vende da sé la scorta, a intervalli,
+convertendola in monete con lo stesso prezzo del mercante
+(`CFG.economy.prices × sellBonus`) — funziona anche dall'altra parte della
+mappa. L'unica concessione a chi è lì vicino per caso è il suono: la moneta
+tintinna solo se il giocatore è a meno di 15 unità, altrimenti resta muto —
+lo stesso motivo per cui, dalla scorsa modifica, anche il colpo di
+boscaioli e minatori tace se sei lontano: un reddito passivo non deve
+sentirsi ovunque sulla mappa.
 
 ### Un recinto quadrato, non un cerchio
 

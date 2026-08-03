@@ -29,6 +29,8 @@ export class WorkerSystem {
     this.pendingStock = {};
     /** Livelli comprati per tipo/leva: {typeId: {yield, capacity}}. */
     this.levels = {};
+    /** Nastri trasportatori comprati: {typeId: true}. */
+    this.conveyors = {};
   }
 
   /**
@@ -111,6 +113,35 @@ export class WorkerSystem {
     const st = this.stations[typeId];
     game.fx.confetti(st.x, 1.3, st.z, 16);
     game.hud.toast(`${WORKER_TYPES[typeId].upgrades[axis].label} potenziato!`);
+    return true;
+  }
+
+  /* ------------------------------------------------- nastro trasportatore */
+
+  hasConveyor(typeId) { return !!this.conveyors[typeId]; }
+
+  /** True se resa e magazzino sono già al livello massimo: solo allora il
+   *  nastro trasportatore si può comprare — è un traguardo, non una tappa. */
+  conveyorReady(typeId) {
+    const u = WORKER_TYPES[typeId].upgrades;
+    return this.level(typeId, 'yield') >= u.yield.maxLevel
+      && this.level(typeId, 'capacity') >= u.capacity.maxLevel;
+  }
+
+  buyConveyor(typeId, game) {
+    if (!this.stations[typeId] || this.hasConveyor(typeId) || !this.conveyorReady(typeId)) return false;
+    const cost = WORKER_TYPES[typeId].conveyor.cost;
+    if (game.stats.coins < cost) return false;
+
+    game.spendCoins(cost);
+    this.conveyors[typeId] = true;
+
+    game.audio.upgrade();
+    game.haptics.fire('success', 0);
+    const st = this.stations[typeId];
+    game.cam.addShake(0.3);
+    game.fx.confetti(st.x, 1.5, st.z, 28);
+    game.hud.toast(`${WORKER_TYPES[typeId].name}: nastro trasportatore installato — vende da solo! 🏭`);
     return true;
   }
 }

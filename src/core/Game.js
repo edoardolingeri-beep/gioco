@@ -483,6 +483,7 @@ export class Game {
         workers: this.workers.counts,
         workersStock: this.workers.stockSnapshot(),
         workersLevels: this.workers.levels,
+        workersConveyors: this.workers.conveyors,
         buildings,
         player: { x: this.player.x, z: this.player.z },
         carry: this.carry.stack.map((s) => s.type),
@@ -531,6 +532,7 @@ export class Game {
     if (data.workers) Object.assign(this.workers.counts, data.workers);
     if (data.workersStock) this.workers.pendingStock = data.workersStock;
     if (data.workersLevels) this.workers.levels = data.workersLevels;
+    if (data.workersConveyors) this.workers.conveyors = data.workersConveyors;
 
     // stato dei cantieri
     const saved = data.buildings ?? (data.hut ? { hut: data.hut } : {});

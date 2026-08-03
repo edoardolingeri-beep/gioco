@@ -225,14 +225,31 @@ export class HUD {
       for (const axis of ['yield', 'capacity']) {
         const def = WORKER_TYPES[typeId].upgrades[axis];
         const cost = g.workers.upgradeCost(typeId, axis);
+        const lvl = g.workers.level(typeId, axis);
         const current = axis === 'yield' ? g.workers.harvestYield(typeId) : g.workers.stockCap(typeId);
         items.push({
           icon: WORKER_TYPES[typeId].icon,
-          title: def.label,
+          title: `${def.label} · Lv ${lvl}/${def.maxLevel}`,
           desc: cost != null ? `${def.desc} (ora: ${current})` : `${def.desc} — al massimo`,
           cost, can: cost != null && g.stats.coins >= cost,
           maxed: cost == null,
           onBuy: () => { g.workers.buyUpgrade(typeId, axis, g); this._renderShop(); },
+        });
+      }
+
+      // Il nastro trasportatore è un traguardo, non una tappa: compare solo
+      // quando resa e magazzino sono già al livello massimo.
+      if (g.workers.conveyorReady(typeId)) {
+        const owned = g.workers.hasConveyor(typeId);
+        const conv = WORKER_TYPES[typeId].conveyor;
+        items.push({
+          icon: '🏭',
+          title: conv.label,
+          desc: owned ? `${WORKER_TYPES[typeId].name}: attivo, vende da solo` : conv.desc,
+          cost: conv.cost, can: !owned && g.stats.coins >= conv.cost,
+          maxed: owned,
+          maxedLabel: owned ? '✓' : 'MAX',
+          onBuy: () => { g.workers.buyConveyor(typeId, g); this._renderShop(); },
         });
       }
     }
@@ -247,7 +264,7 @@ export class HUD {
             <div class="shop-item-desc">${it.desc}</div>
           </div>
           ${it.maxed
-            ? `<span class="shop-max">MAX</span>`
+            ? `<span class="shop-max">${it.maxedLabel ?? 'MAX'}</span>`
             : `<button class="btn shop-buy" data-i="${i}" data-cost="${it.cost}" ${it.can ? '' : 'disabled'}>${it.cost} 🪙</button>`}
         </div>
       `;

@@ -65,7 +65,7 @@ const shot = (n) => `/tmp/shop-${n}.png`;
   // ora compra un potenziamento dell'operaio: trova la riga "Resa del boscaiolo"
   const bought = await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll('.shop-item'));
-    const row = rows.find((r) => r.querySelector('.shop-item-title')?.textContent === 'Resa del boscaiolo');
+    const row = rows.find((r) => r.querySelector('.shop-item-title')?.textContent.startsWith('Resa del boscaiolo'));
     const btn = row?.querySelector('.shop-buy');
     if (!btn) return false;
     btn.click();

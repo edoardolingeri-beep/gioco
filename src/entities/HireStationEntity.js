@@ -40,9 +40,11 @@ export class HireStationEntity extends Entity {
     this.pulse = 0;
     this.playerInside = false;
 
-    /** Risorsa già raccolta e in attesa che il giocatore la ritiri. */
+    /** Risorsa già raccolta e in attesa che il giocatore la ritiri (o che
+     *  il nastro trasportatore, se comprato, la venda da solo). */
     this.stock = 0;
     this.collectTimer = 0;
+    this.sellTimer = 0;
   }
 
   get count() { return this.workers.counts[this.def.id] ?? 0; }
@@ -61,7 +63,8 @@ export class HireStationEntity extends Entity {
     if (inside && !this.playerInside) game.bus.emit('zone:enter', this);
     this.playerInside = inside;
 
-    if (inside) this._collect(dt, game);
+    if (this.workers.hasConveyor(this.def.id)) this._autoSell(dt, game);
+    else if (inside) this._collect(dt, game);
 
     if (this.maxed) { this.charge = 0; return; }
 
@@ -107,6 +110,30 @@ export class HireStationEntity extends Entity {
     }, idx);
   }
 
+  /**
+   * Il nastro trasportatore (comprato al negozio, una volta per tipo):
+   * vende da sé la scorta, senza bisogno che il giocatore sia lì — funziona
+   * anche dall'altra parte della mappa. Il suono si sente solo se sei
+   * abbastanza vicino, stesso motivo per cui i colpi degli operai tacciono
+   * da lontano: nessuno vuole un tintinnio di monete continuo in sottofondo.
+   */
+  _autoSell(dt, game) {
+    if (this.stock <= 0) return;
+    this.sellTimer -= dt;
+    if (this.sellTimer > 0) return;
+
+    this.sellTimer = CFG.deliver.interval;
+    this.stock--;
+    const price = Math.round((CFG.economy.prices[this.def.resource] ?? 1) * (game.stats.sellBonus ?? 1));
+    game.addCoins(price, this.x, 1.3, this.z);
+
+    const near = Math.hypot(game.player.x - this.x, game.player.z - this.z) < 15;
+    if (near) {
+      game.audio.coin(0);
+      game.fx.sparks(this.x, 1.2, this.z, 4, 'rgba(255,220,140,1)', 0.6);
+    }
+  }
+
   _hire(game) {
     this.charge = 0;
     this.pulse = 1;
@@ -139,10 +166,20 @@ export class HireStationEntity extends Entity {
   drawUI(ctx, cam, dpr, game) {
     if (this.panelT < 0.02) return;
     const info = RESOURCE_INFO[this.def.resource];
+    const hasConveyor = this.workers.hasConveyor(this.def.id);
 
-    // Il magazzino dell'operaio: quando c'è qualcosa pronto, è il pannello
-    // più in alto, così è la prima cosa che si legge avvicinandosi.
-    if (this.stock > 0) {
+    if (hasConveyor) {
+      // Niente più "vieni a ritirare": si vende da sé. Un solo promemoria
+      // discreto, così si capisce perché il magazzino qui non si riempie mai.
+      drawPanel(ctx, cam, dpr, this.x, 2.55, this.z, {
+        title: '🏭 Nastro trasportatore — vende da solo',
+        appear: this.panelT,
+        width: 230,
+        titleColor: '#9ef7c0',
+      });
+    } else if (this.stock > 0) {
+      // Il magazzino dell'operaio: quando c'è qualcosa pronto, è il pannello
+      // più in alto, così è la prima cosa che si legge avvicinandosi.
       drawPanel(ctx, cam, dpr, this.x, 2.55, this.z, {
         title: this.stockFull
           ? `${info.icon} Magazzino pieno — vieni a ritirare!`
