@@ -3,9 +3,12 @@
  *
  * Ogni tanto, mentre giochi, succede qualcosa che non hai chiesto tu:
  *   - un carro rovesciato lascia risorse gratis vicino a te;
- *   - il mercante paga di più per un po';
  *   - un lupo più forte del solito si aggira nei paraggi, con una scelta
  *     vera (affrontarlo o lasciarlo perdere) e una ricompensa più grossa.
+ *
+ * (C'era anche un evento "il mercante paga di più per un po'": tolto perché
+ * poco chiaro — un bonus a tempo che scade da solo, senza che si capisca
+ * subito perché il prezzo è cambiato, confondeva più che aiutare.)
  *
  * Si attiva quando nasce il villaggio (come `EnemySpawner`), e da lì in poi
  * sceglie un evento a caso a intervalli irregolari — mai troppo spesso,
@@ -22,10 +25,6 @@ export class EventSystem {
     this.game = game;
     this.enabled = false;
     this.timer = CFG.events.firstDelay;
-    /** Moltiplicatore temporaneo sul prezzo di vendita (evento "mercante
-     *  generoso"): letto da MerchantEntity e HireStationEntity._autoSell. */
-    this.sellMul = 1;
-    this.sellMulT = 0;
   }
 
   enable() {
@@ -35,14 +34,6 @@ export class EventSystem {
   }
 
   update(dt, game) {
-    if (this.sellMulT > 0) {
-      this.sellMulT -= dt;
-      if (this.sellMulT <= 0) {
-        this.sellMul = 1;
-        game.hud.toast('L\'offerta del mercante è finita');
-      }
-    }
-
     if (!this.enabled) return;
     this.timer -= dt;
     if (this.timer > 0) return;
@@ -58,13 +49,12 @@ export class EventSystem {
       return;
     }
 
-    const pool = ['cart', 'merchantBonus'];
+    const pool = ['cart'];
     if (game.stats.wolvesKilled + game.stats.bearsKilled >= CFG.events.rareWolfMinKills) {
       pool.push('rareWolf');
     }
     const kind = pool[(Math.random() * pool.length) | 0];
     if (kind === 'cart') this._cart(game);
-    else if (kind === 'merchantBonus') this._merchantBonus(game);
     else this._rareWolf(game);
   }
 
@@ -90,15 +80,6 @@ export class EventSystem {
     }
     game.audio.pop(4);
     game.hud.toast('Un carro si è rovesciato lì vicino! 🛒💥 Raccogli quello che riesci');
-  }
-
-  /** Il mercante, per un po', paga di più per tutto. */
-  _merchantBonus(game) {
-    this.sellMul = CFG.events.merchantBonusMul;
-    this.sellMulT = CFG.events.merchantBonusDuration;
-    const pct = Math.round((this.sellMul - 1) * 100);
-    const mins = Math.round(this.sellMulT / 60) || 1;
-    game.hud.toast(`Il mercante oggi paga di più: +${pct}% per ${mins} min 🤝`);
   }
 
   /** Un lupo più forte del solito: una scelta vera, non solo un annuncio. */

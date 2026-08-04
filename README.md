@@ -549,24 +549,33 @@ bisogno che sia già attraversabile: il pesce, a differenza di ferro e oro,
 non è una ricompensa per il ponte — è un modo per dargli anche un secondo
 motivo di esistere (sblocca il pescatore, oltre alla sponda nord).
 
+Da fermo e in silenzio, il pescatore rischiava di sembrare un operaio che
+"non fa nulla" — a differenza di boscaiolo e minatore, che si vedono
+camminare e colpire. `WorkerEntity._workStationary` ora dà un riscontro
+anche a metà ciclo, non solo alla fine: una spruzzata sull'acqua (e un
+suono, se sei vicino) mentre aspetta l'abboccata, e un "+N 🐟" ben visibile
+a ogni consegna — lo stesso genere di riscontro che gli altri operai hanno
+già dal colpo che si sente e si vede.
+
 ### Eventi casuali: qualcosa che non hai chiesto tu
 
 `EventSystem` (attivo appena nasce il villaggio, come `EnemySpawner`)
 sceglie ogni tanto — a intervalli irregolari, mai troppo ravvicinati — uno
-tra tre piccoli imprevisti:
+tra due piccoli imprevisti:
 
 - **Carro rovesciato**: qualche risorsa gratis appare a terra vicino al
   giocatore (`PickupSystem.spawn`, stesso sistema di raccolta di sempre).
-- **Mercante generoso**: il prezzo di vendita sale per un minuto
-  (`EventSystem.sellMul`, letto sia da `MerchantEntity` sia dal nastro
-  trasportatore di ogni cartello).
-- **Lupo feroce**: l'unico dei tre con una scelta vera, mostrata in un
-  pannello che resta finché non si decide (`HUD.showEvent`) — affrontarlo
-  fa comparire un `WolfEntity` più grande e con più vita, la cui morte
-  paga una ricompensa moltiplicata (`rewardMul`, letto da
-  `Game`'s `enemy:killed`); evitarlo non fa succedere nulla. Compare solo
-  dopo che il giocatore ha già ucciso almeno un nemico, altrimenti
-  rischierebbe di presentarsi prima che sappia difendersi.
+- **Lupo feroce**: una scelta vera, mostrata in un pannello che resta
+  finché non si decide (`HUD.showEvent`) — affrontarlo fa comparire un
+  `WolfEntity` più grande e con più vita, la cui morte paga una ricompensa
+  moltiplicata (`rewardMul`, letto da `Game`'s `enemy:killed`); evitarlo
+  non fa succedere nulla. Compare solo dopo che il giocatore ha già ucciso
+  almeno un nemico, altrimenti rischierebbe di presentarsi prima che sappia
+  difendersi.
+
+C'era anche un terzo evento, "il mercante paga di più per un po'": tolto
+perché confondeva più che aiutare — un bonus a tempo che scade da solo,
+senza un motivo visibile per cui il prezzo è cambiato, non si capiva.
 
 Nessun evento scatta se negozio o opzioni sono già aperti: il timer si
 limita a riprovare tra poco, invece di sovrapporsi a un altro pannello.

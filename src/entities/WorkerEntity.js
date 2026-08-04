@@ -185,21 +185,33 @@ export class WorkerEntity extends Entity {
   _workStationary(dt, game) {
     this.vx = damp(this.vx, 0, 10, dt);
     this.vz = damp(this.vz, 0, 10, dt);
-    this.workPhase += dt * 3.2;
-    this.bob = Math.abs(Math.sin(this.workPhase)) * 0.05;
+    this.workPhase += dt * 2.4;
+    this.bob = Math.abs(Math.sin(this.workPhase)) * 0.06;
 
-    // Cesta piena: aspetta con la lenza in mano finché il giocatore non
-    // passa a ritirare, invece di continuare a pescare a vuoto.
+    // Cesta piena: aspetta con la lenza ferma finché il giocatore non passa
+    // a ritirare, invece di continuare a pescare a vuoto.
     if (this.station.stockFull) return;
 
     const prev = this.workT;
     this.workT += dt;
-    if (Math.floor(prev * 1.4) !== Math.floor(this.workT * 1.4)) {
-      game.fx.sparks(this.x, 0.35, this.z, 3, 'rgba(150,210,235,1)', 0.5);
+
+    // Una spruzzata sull'acqua ogni tanto, a metà del ciclo: da fermo e da
+    // lontano è facile pensare che l'operaio non stia facendo nulla — questo
+    // si vede (e si sente, se sei vicino) anche prima che il pesce sia pronto.
+    if (Math.floor(prev / 1.3) !== Math.floor(this.workT / 1.3)) {
+      game.fx.sparks(this.x, 0.2, this.z, 6, 'rgba(150,210,235,1)', 0.7);
+      if (dist(this.x, this.z, game.player.x, game.player.z) < SOUND_AUDIBLE_R) game.audio.pop(2);
     }
+
     if (this.workT >= this.def.workTime) {
       this.workT = 0;
+      const amount = game.workers.harvestYield(this.def.id);
       this._deposit(game);
+      // "+N 🐟" ben visibile: il pesce che si accumula nella cesta, non
+      // solo un numero nel pannello.
+      game.texts.spawn(`+${amount}`, this.x, 1.2, this.z, {
+        color: '#bfe8ff', icon: '🐟', size: 1, life: 1,
+      });
     }
   }
 

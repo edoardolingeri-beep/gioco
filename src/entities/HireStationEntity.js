@@ -124,7 +124,7 @@ export class HireStationEntity extends Entity {
 
     this.sellTimer = CFG.deliver.interval;
     this.stock--;
-    const price = Math.round((CFG.economy.prices[this.def.resource] ?? 1) * (game.stats.sellBonus ?? 1) * game.events.sellMul);
+    const price = Math.round((CFG.economy.prices[this.def.resource] ?? 1) * (game.stats.sellBonus ?? 1));
     game.addCoins(price, this.x, 1.3, this.z);
 
     const near = Math.hypot(game.player.x - this.x, game.player.z - this.z) < 15;

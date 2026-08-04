@@ -130,8 +130,6 @@ export const CFG = {
     interval: [90, 180],     // intervallo (secondi) tra un evento e il successivo
     cartMinRes: 5,
     cartMaxRes: 8,
-    merchantBonusMul: 1.7,
-    merchantBonusDuration: 60,
     rareWolfHpMul: 1.8,
     rareWolfSpeedMul: 1.1,
     rareWolfRewardMul: 4,

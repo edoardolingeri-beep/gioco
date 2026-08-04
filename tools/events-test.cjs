@@ -1,8 +1,8 @@
 /**
  * events-test.cjs — Verifica gli eventi casuali (EventSystem): il carro
- * rovesciato lascia risorse gratis, il mercante paga di più per un po', e
- * il lupo feroce è una scelta vera (accettare spawna un nemico più tosto
- * con ricompensa maggiore, rifiutare non fa succedere nulla).
+ * rovesciato lascia risorse gratis, e il lupo feroce è una scelta vera
+ * (accettare spawna un nemico più tosto con ricompensa maggiore, rifiutare
+ * non fa succedere nulla).
  *
  * Il timer vero è troppo lento per un test (90-180s): chiamiamo i metodi
  * interni direttamente, bypassando l'attesa — è lo stesso approccio già
@@ -33,31 +33,10 @@ const { chromium } = require('playwright');
   console.log('CARRO ROVESCIATO — RISORSE APPARSE A TERRA:', JSON.stringify(cart),
     cart.pickups > 0 ? '✓' : '✗');
 
-  // --- mercante generoso: bonus di vendita temporaneo ---
-  const bonus = await page.evaluate(() => {
-    const g = window.game;
-    const before = g.events.sellMul;
-    g.events._merchantBonus(g);
-    return { before, after: g.events.sellMul, timer: g.events.sellMulT };
-  });
-  console.log('BONUS MERCANTE:', JSON.stringify(bonus), bonus.after > 1 && bonus.timer > 0 ? '✓' : '✗');
-
-  // il bonus deve davvero alzare il prezzo di vendita
-  const priceCheck = await page.evaluate(() => {
-    const g = window.game;
-    return {
-      normal: Math.round(2 * (g.stats.sellBonus ?? 1)),
-      withBonus: Math.round(2 * (g.stats.sellBonus ?? 1) * g.events.sellMul),
-    };
-  });
-  console.log('PREZZO LEGNO NORMALE VS CON BONUS:', JSON.stringify(priceCheck),
-    priceCheck.withBonus > priceCheck.normal ? '✓' : '✗');
-
-  // il bonus scade da solo
-  await page.evaluate(() => { window.game.events.sellMulT = 0.05; });
-  await page.waitForTimeout(300);
-  const expired = await page.evaluate(() => window.game.events.sellMul);
-  console.log('IL BONUS SCADE DA SOLO:', expired === 1 ? '✓' : '✗');
+  // il bonus "mercante generoso" è stato rimosso (poco chiaro): il pool
+  // di eventi non deve più contenerlo.
+  const noMerchantBonus = await page.evaluate(() => typeof window.game.events._merchantBonus !== 'function');
+  console.log('EVENTO "MERCANTE GENEROSO" RIMOSSO:', noMerchantBonus ? '✓' : '✗');
 
   // --- lupo feroce: popup con scelta vera ---
   await page.evaluate(() => window.game.events._rareWolf(window.game));
