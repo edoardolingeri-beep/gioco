@@ -36,10 +36,16 @@ export class WorkerEntity extends Entity {
    *   in cui deposita.
    */
   constructor(station, game) {
-    super(station.x, station.z);
+    const def = station.def;
+    // Un operaio "stanziale" (il pescatore, per ora) non cerca né cammina:
+    // nasce già al suo molo, un passo più vicino all'acqua del cartello
+    // (vedi `dockOffX/Z` in data/workers.js), e ci resta per sempre.
+    const startX = def.stationary ? station.x + (def.dockOffX ?? 0) : station.x;
+    const startZ = def.stationary ? station.z + (def.dockOffZ ?? 0) : station.z;
+    super(startX, startZ);
     this.game = game;
     this.station = station;
-    this.def = station.def;
+    this.def = def;
     this.homeX = station.x; this.homeZ = station.z;
     this.static = false;
     this.radius = 0.3;
@@ -49,7 +55,7 @@ export class WorkerEntity extends Entity {
     this.vx = 0; this.vz = 0;
     this.yaw = fxRand.range(0, TAU);
 
-    this.state = STATE.SEEK;
+    this.state = def.stationary ? STATE.WORK : STATE.SEEK;
     this.seekCooldown = fxRand.range(0, 0.4);
     this.target = null;
     this.workT = 0;
@@ -71,7 +77,9 @@ export class WorkerEntity extends Entity {
     switch (this.state) {
       case STATE.SEEK: this._seek(dt, game); break;
       case STATE.WALK: this._walk(dt, game); break;
-      case STATE.WORK: this._work(dt, game); break;
+      case STATE.WORK:
+        if (this.def.stationary) this._workStationary(dt, game); else this._work(dt, game);
+        break;
       case STATE.RETURN: this._return(dt, game); break;
     }
 
@@ -167,6 +175,32 @@ export class WorkerEntity extends Entity {
     }
 
     if (this.workT >= this.def.workTime) this._harvest(game);
+  }
+
+  /**
+   * Il pescatore (per ora l'unico "stanziale"): non c'è nessun bersaglio da
+   * raggiungere, resta al molo e pesca lì — e deposita direttamente al
+   * cartello, che è a un passo, senza mai passare da SEEK/WALK/RETURN.
+   */
+  _workStationary(dt, game) {
+    this.vx = damp(this.vx, 0, 10, dt);
+    this.vz = damp(this.vz, 0, 10, dt);
+    this.workPhase += dt * 3.2;
+    this.bob = Math.abs(Math.sin(this.workPhase)) * 0.05;
+
+    // Cesta piena: aspetta con la lenza in mano finché il giocatore non
+    // passa a ritirare, invece di continuare a pescare a vuoto.
+    if (this.station.stockFull) return;
+
+    const prev = this.workT;
+    this.workT += dt;
+    if (Math.floor(prev * 1.4) !== Math.floor(this.workT * 1.4)) {
+      game.fx.sparks(this.x, 0.35, this.z, 3, 'rgba(150,210,235,1)', 0.5);
+    }
+    if (this.workT >= this.def.workTime) {
+      this.workT = 0;
+      this._deposit(game);
+    }
   }
 
   _harvest(game) {

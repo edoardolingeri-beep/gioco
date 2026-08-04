@@ -107,7 +107,7 @@ export const CFG = {
 
   /* -------------------------------------------------------------- economia */
   economy: {
-    prices: { wood: 2, stone: 5, iron: 14, gold: 46 },
+    prices: { wood: 2, stone: 5, iron: 14, gold: 46, fish: 6 },
   },
 
   /* --------------------------------------------------- guadagni in assenza */
@@ -122,6 +122,22 @@ export const CFG = {
     // torna), come multiplo di `workTime`: approssima il tempo che passa
     // davvero raccogliendo, senza dover simulare il mondo a ritroso.
     cycleFactor: 5,
+  },
+
+  /* -------------------------------------------------------- eventi casuali */
+  events: {
+    firstDelay: 75,          // prima del primo evento, a partire dal villaggio nato
+    interval: [90, 180],     // intervallo (secondi) tra un evento e il successivo
+    cartMinRes: 5,
+    cartMaxRes: 8,
+    merchantBonusMul: 1.7,
+    merchantBonusDuration: 60,
+    rareWolfHpMul: 1.8,
+    rareWolfSpeedMul: 1.1,
+    rareWolfRewardMul: 4,
+    // Il lupo feroce compare solo dopo che il giocatore ha già affrontato
+    // almeno un nemico: prima non saprebbe ancora difendersi.
+    rareWolfMinKills: 1,
   },
 
   /* ------------------------------------------------------------- fiume */

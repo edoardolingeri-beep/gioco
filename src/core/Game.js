@@ -26,6 +26,7 @@ import { Haptics } from '../systems/Haptics.js';
 import { QualityManager } from '../systems/QualityManager.js';
 import { VillageSystem } from '../systems/VillageSystem.js';
 import { EnemySpawner } from '../systems/EnemySpawner.js';
+import { EventSystem } from '../systems/EventSystem.js';
 import { BearEntity } from '../entities/BearEntity.js';
 import { TrafficSystem } from '../systems/TrafficSystem.js';
 import { WorkerSystem } from '../systems/WorkerSystem.js';
@@ -111,6 +112,7 @@ export class Game {
 
     this.village = new VillageSystem(this);
     this.spawner = new EnemySpawner(this);
+    this.events = new EventSystem(this);
     this.traffic = new TrafficSystem(this);
     this.workers = new WorkerSystem(this);
 
@@ -153,7 +155,7 @@ export class Game {
   _wireEvents() {
     // Numeri volanti su ogni raccolta
     this.bus.on('resource:gained', ({ type, amount, x, y, z }) => {
-      const info = { wood: '🪵', stone: '🪨', iron: '⛓️', gold: '🥇' }[type] ?? '';
+      const info = { wood: '🪵', stone: '🪨', iron: '⛓️', gold: '🥇', fish: '🐟' }[type] ?? '';
       this.texts.spawn(`+${amount}`, x, y + 0.3, z, {
         color: '#ffffff', icon: info, size: 0.95,
       });
@@ -168,6 +170,7 @@ export class Game {
       this.village.levelUp();
       this._unlockNextSite(b.def.id);
       this.spawner.enable();
+      this.events.enable();
       this.save();
     });
 
@@ -176,7 +179,7 @@ export class Game {
 
     this.bus.on('enemy:killed', (e) => {
       const isBear = e instanceof BearEntity;
-      const reward = isBear ? CFG.enemies.bear.reward : CFG.enemies.wolf.reward;
+      const reward = (isBear ? CFG.enemies.bear.reward : CFG.enemies.wolf.reward) * (e.rewardMul ?? 1);
       if (isBear) this.stats.bearsKilled++; else this.stats.wolvesKilled++;
       this.addCoins(reward, e.x, 1.2, e.z);
       this.audio.coin(0);
@@ -326,6 +329,7 @@ export class Game {
 
     this.world.update(dt, this);
     this.spawner.update(dt, this);
+    this.events.update(dt, this);
     this.traffic.update(dt);
     this.carry.update(dt);
     this.pickups.update(dt);
@@ -493,6 +497,7 @@ export class Game {
         workersStock: this.workers.stockSnapshot(),
         workersLevels: this.workers.levels,
         workersConveyors: this.workers.conveyors,
+        workersPits2: this.workers.pits2,
         buildings,
         player: { x: this.player.x, z: this.player.z },
         carry: this.carry.stack.map((s) => s.type),
@@ -519,6 +524,7 @@ export class Game {
     const counts = data.workers ?? {};
     const levels = data.workersLevels ?? {};
     const conveyors = data.workersConveyors ?? {};
+    const pits2 = data.workersPits2 ?? {};
     const stock = { ...(data.workersStock ?? {}) };
     const resources = {};
     let coins = 0;
@@ -528,11 +534,14 @@ export class Game {
       if (count <= 0) continue;
       const def = WORKER_TYPES[typeId];
       const lvl = levels[typeId] ?? { yield: 0, capacity: 0 };
-      const yieldAmt = def.upgrades.yield.base + (lvl.yield ?? 0) * def.upgrades.yield.step;
+      let yieldAmt = def.upgrades.yield.base + (lvl.yield ?? 0) * def.upgrades.yield.step;
+      if (pits2[typeId]) yieldAmt *= def.pit2.yieldMul;
       const cap = def.upgrades.capacity.base + (lvl.capacity ?? 0) * def.upgrades.capacity.step;
       // Tempo medio di un ciclo completo (cerca, vai, lavora, torna): non è
-      // simulabile a ritroso, quindi si approssima da `workTime`.
-      const cycleTime = def.workTime * CFG.offline.cycleFactor;
+      // simulabile a ritroso, quindi si approssima da `workTime`. Un operaio
+      // "stanziale" (il pescatore) non cerca né cammina: il suo ciclo È
+      // `workTime`, punto.
+      const cycleTime = def.workTime * (def.stationary ? 1 : CFG.offline.cycleFactor);
       const produced = (sec / cycleTime) * yieldAmt * count;
 
       if (conveyors[typeId]) {
@@ -606,6 +615,7 @@ export class Game {
     if (data.workersStock) this.workers.pendingStock = data.workersStock;
     if (data.workersLevels) this.workers.levels = data.workersLevels;
     if (data.workersConveyors) this.workers.conveyors = data.workersConveyors;
+    if (data.workersPits2) this.workers.pits2 = data.workersPits2;
 
     // stato dei cantieri
     const saved = data.buildings ?? (data.hut ? { hut: data.hut } : {});
@@ -634,7 +644,7 @@ export class Game {
     // ricostruisce già alla misura giusta, non a quella base.
     this.village.expansions = data.villageExpansions ?? 0;
     const lvl = data.villageLevel ?? (saved.hut?.state === BUILD_STATE.DONE ? 1 : 0);
-    if (lvl > 0) { this.village.restore(lvl); this.spawner.enable(); }
+    if (lvl > 0) { this.village.restore(lvl); this.spawner.enable(); this.events.enable(); }
     this.music.setPhase(this.village.phase);
     // Il traffico si riattiva senza annunci (ci pensa già `onRestore`, ma
     // teniamo anche il flag salvato come rete di sicurezza).

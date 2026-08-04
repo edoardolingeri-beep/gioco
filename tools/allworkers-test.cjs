@@ -1,8 +1,8 @@
 /**
  * allworkers-test.cjs — Verifica che ogni materiale abbia il suo operaio:
- * boscaiolo (legno), minatore (pietra), minatore di ferro e cercatore
- * d'oro, tutti gestiti dalla stessa WorkerSystem generica, e tutti e
- * quattro comprabili/potenziabili dal negozio.
+ * boscaiolo (legno), minatore (pietra), minatore di ferro, cercatore
+ * d'oro e pescatore (pesce), tutti gestiti dalla stessa WorkerSystem
+ * generica, e tutti comprabili/potenziabili dal negozio.
  */
 const { chromium } = require('playwright');
 
@@ -44,8 +44,8 @@ const { chromium } = require('playwright');
   });
   console.log('CARTELLI:', JSON.stringify(stations));
   const ids = stations.map((s) => s.id).sort();
-  console.log('TUTTI E QUATTRO PRESENTI:',
-    JSON.stringify(ids) === JSON.stringify(['goldminer', 'ironminer', 'lumberjack', 'miner']) ? '✓' : '✗');
+  console.log('TUTTI E CINQUE PRESENTI:',
+    JSON.stringify(ids) === JSON.stringify(['fisherman', 'goldminer', 'ironminer', 'lumberjack', 'miner']) ? '✓' : '✗');
 
   // assumi un minatore di ferro e uno cercatore d'oro, verifica che lavorino
   const hired = await page.evaluate(async () => {
@@ -96,9 +96,9 @@ const { chromium } = require('playwright');
   const shopTitles = await page.evaluate(() =>
     Array.from(document.querySelectorAll('.shop-item-title')).map((e) => e.textContent));
   console.log('NEGOZIO:', JSON.stringify(shopTitles));
-  const hasAllFour = ['boscaiolo', 'minatore', 'ferro', "oro"].every((word) =>
+  const hasAllFive = ['boscaiolo', 'minatore', 'ferro', 'oro', 'pescatore'].every((word) =>
     shopTitles.some((t) => t.toLowerCase().includes(word)));
-  console.log('TUTTE E QUATTRO LE CATEGORIE NEL NEGOZIO:', hasAllFour ? '✓' : '✗');
+  console.log('TUTTE E CINQUE LE CATEGORIE NEL NEGOZIO:', hasAllFive ? '✓' : '✗');
 
   // controlla che le descrizioni vadano a capo, non taglino con i puntini
   const desc = await page.evaluate(() => {

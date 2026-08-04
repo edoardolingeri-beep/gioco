@@ -451,9 +451,9 @@ Il giocatore, entrando nella zona del cartello, si vede travasare la scorta
 nello zaino a raffica — la stessa cadenza (`CFG.deliver.interval`) e lo
 stesso volo con `DeliverySystem` usati per ogni altra consegna — e da lì in
 poi la risorsa è sua, da portare a un cantiere o al mercante come se
-l'avesse raccolta a mano. Un nastro trasportatore, in una fase successiva
-del gioco, è il candidato naturale per automatizzare anche quest'ultimo
-tratto: la struttura è già pronta, semplicemente non esiste ancora.
+l'avesse raccolta a mano. Il nastro trasportatore (vedi sotto) automatizza
+anche quest'ultimo tratto, per chi ha portato l'operaio fino in fondo alla
+sua progressione.
 
 Il cartello compare vicino all'edificio che lo sblocca (`offX`/`offZ` in
 `data/workers.js`), spostato verso il centro del villaggio e non verso il
@@ -509,9 +509,67 @@ minatore — `WorkerSystem.registerStation` sceglie l'uno o l'altro a seconda
 di quale il tipo di operaio definisce.
 
 Le descrizioni nel pannello del negozio vanno a capo invece di troncarsi
-con i puntini di sospensione — con quattro operai anziché due, e un testo
+con i puntini di sospensione — con cinque operai anziché due, e un testo
 non sempre breve ("Il cartello accumula di più prima di riempirsi"),
 tagliarle a mezza frase le rendeva illeggibili.
+
+### Il "nuovo pozzo": un secondo traguardo dopo il nastro
+
+Il nastro trasportatore non è più l'ultima parola su un operaio: dopo
+averlo installato, il negozio offre un secondo acquisto — il "nuovo pozzo"
+(`WorkerSystem.buyPit2`, dati in `WORKER_TYPES[id].pit2`) — che raddoppia
+per sempre la resa di quell'operaio. È un traguardo sopra il traguardo,
+apposta: comprarlo prima del nastro non avrebbe senso (raddoppiare una
+resa che il giocatore deve ancora venire a ritirare a mano non si sente),
+quindi `pit2Ready` richiede `hasConveyor` come precondizione.
+
+Nel pannello del negozio, sia il manager (nastro) sia il nuovo pozzo
+condividono lo stesso trattamento grafico — una card con bordo dorato e
+un'etichetta ("MANAGER"/"POZZO") invece della solita riga — per farli
+risaltare come i due traguardi che sono, non come un potenziamento
+qualunque.
+
+### Il pescatore: un operaio "stanziale"
+
+Il pesce è la quinta risorsa, e il pescatore (sbloccato dal ponte) il suo
+operaio — ma con una differenza rispetto agli altri quattro: non cerca né
+trasporta nulla. Aggiungere una risorsa legata al fiume nello stesso modo
+di legno/pietra/ferro/oro avrebbe richiesto disegnare (e cuocere) una
+sprite apposta per ogni "punto pesca" lungo la riva; invece, `WorkerEntity`
+supporta un flag `stationary` (solo il pescatore lo usa, per ora): appena
+assunto, l'operaio nasce già al suo molo — un passo più vicino all'acqua
+rispetto al cartello (`dockOffX`/`dockOffZ`) — e ci pesca per sempre,
+saltando del tutto gli stati SEEK/WALK/RETURN e depositando direttamente
+al cartello (`WorkerEntity._workStationary`). Stesse due leve, stesso
+nastro, stesso nuovo pozzo degli altri operai: cambia solo *come* lavora,
+non *cosa* si può comprare per lui.
+
+Il cartello sta sulla sponda SUD del fiume, vicino al ponte ma senza
+bisogno che sia già attraversabile: il pesce, a differenza di ferro e oro,
+non è una ricompensa per il ponte — è un modo per dargli anche un secondo
+motivo di esistere (sblocca il pescatore, oltre alla sponda nord).
+
+### Eventi casuali: qualcosa che non hai chiesto tu
+
+`EventSystem` (attivo appena nasce il villaggio, come `EnemySpawner`)
+sceglie ogni tanto — a intervalli irregolari, mai troppo ravvicinati — uno
+tra tre piccoli imprevisti:
+
+- **Carro rovesciato**: qualche risorsa gratis appare a terra vicino al
+  giocatore (`PickupSystem.spawn`, stesso sistema di raccolta di sempre).
+- **Mercante generoso**: il prezzo di vendita sale per un minuto
+  (`EventSystem.sellMul`, letto sia da `MerchantEntity` sia dal nastro
+  trasportatore di ogni cartello).
+- **Lupo feroce**: l'unico dei tre con una scelta vera, mostrata in un
+  pannello che resta finché non si decide (`HUD.showEvent`) — affrontarlo
+  fa comparire un `WolfEntity` più grande e con più vita, la cui morte
+  paga una ricompensa moltiplicata (`rewardMul`, letto da
+  `Game`'s `enemy:killed`); evitarlo non fa succedere nulla. Compare solo
+  dopo che il giocatore ha già ucciso almeno un nemico, altrimenti
+  rischierebbe di presentarsi prima che sappia difendersi.
+
+Nessun evento scatta se negozio o opzioni sono già aperti: il timer si
+limita a riprovare tra poco, invece di sovrapporsi a un altro pannello.
 
 ### Un recinto quadrato, non un cerchio
 
@@ -682,9 +740,8 @@ Le cinque fasi previste sono completate. Gli sviluppi naturali da qui:
   e dall'orso: chi ruba e scappa, chi attacca in gruppo.
 - **Porto e navi**, sfruttando il sistema di percorsi già usato per il tram.
 - **Meteo**: pioggia e neve, con lo stesso schema a veli usato dalla notte.
-- **Nastri trasportatori**: una costruzione che automatizzi il tratto finale
-  del lavoro degli operai — dal magazzino del cartello al cantiere o al
-  mercante — senza che il giocatore debba più portarlo a mano.
+- **Selettore x1/x10/xMax** nel negozio, per comprare più livelli di
+  potenziamento in un colpo solo invece di premere dieci volte.
 
 Il motore dell'evoluzione è già in funzione: `VillageSystem` tiene un livello
 che sale a ogni costruzione completata, e ogni livello elenca in `STAGES` gli

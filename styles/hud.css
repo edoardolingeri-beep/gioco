@@ -520,3 +520,21 @@
 
 .welcome-stats { grid-template-columns: repeat(2, 1fr); width: 100%; }
 .welcome-stats b { color: var(--gold); }
+
+/* ------------------------------------------------------------- evento casuale */
+
+.event-card { align-items: center; text-align: center; }
+
+.event-desc {
+  font-size: 13px;
+  font-weight: 700;
+  opacity: .85;
+  line-height: 1.45;
+}
+
+.event-accept {
+  background: var(--bevel-green);
+  border-bottom-color: var(--bevel-green-edge);
+  color: #0d3a20;
+  text-shadow: 0 1px 0 rgba(255,255,255,.25);
+}

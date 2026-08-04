@@ -17,6 +17,7 @@ export const RESOURCE_INFO = {
   stone: { label: 'Pietra', icon: '🪨', color: '#a8adbb' },
   iron:  { label: 'Ferro',  icon: '⛓️', color: '#c7ccd8' },
   gold:  { label: 'Oro',    icon: '🥇', color: '#ffce54' },
+  fish:  { label: 'Pesce',  icon: '🐟', color: '#7ec8e3' },
 };
 
 export const BUILDINGS = {
@@ -143,9 +144,13 @@ Object.assign(BUILDINGS, {
       const b = game.world.buildings.bridge;
       game.world.river.openGap(b.x, 1.3);
       game.hud.toast('Il fiume è attraversabile! A nord c\'è il ferro ⛓️');
+      game.workers.registerStation('fisherman', b);
     },
     /** Al caricamento il varco va riaperto, senza messaggi. */
-    onRestore: (game, b) => game.world.river.openGap(b.x, 1.3),
+    onRestore: (game, b) => {
+      game.world.river.openGap(b.x, 1.3);
+      game.workers.registerStation('fisherman', b);
+    },
   },
 
   mill: {

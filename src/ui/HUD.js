@@ -88,6 +88,17 @@ export class HUD {
           <button class="btn" id="welcome-close">Fantastico!</button>
         </div>
       </div>
+
+      <!-- Evento casuale con una scelta vera — vedi EventSystem -->
+      <div class="sheet" id="hud-event-sheet" data-ui hidden>
+        <div class="sheet-card event-card">
+          <h2 id="event-title">Evento</h2>
+          <div class="welcome-mascot" id="event-icon">❗</div>
+          <div class="event-desc" id="event-desc"></div>
+          <button class="btn event-accept" id="event-accept">Accetta</button>
+          <button class="btn" id="event-decline">Lascia perdere</button>
+        </div>
+      </div>
     `;
 
     this.el = {
@@ -115,6 +126,12 @@ export class HUD {
       welcomeAway: this.root.querySelector('#welcome-away'),
       welcomeMascot: this.root.querySelector('#welcome-mascot'),
       welcomeList: this.root.querySelector('#welcome-list'),
+      eventSheet: this.root.querySelector('#hud-event-sheet'),
+      eventTitle: this.root.querySelector('#event-title'),
+      eventIcon: this.root.querySelector('#event-icon'),
+      eventDesc: this.root.querySelector('#event-desc'),
+      eventAccept: this.root.querySelector('#event-accept'),
+      eventDecline: this.root.querySelector('#event-decline'),
     };
 
     this.healthShown = 1;
@@ -182,6 +199,30 @@ export class HUD {
     this.root.querySelector('#welcome-close').addEventListener('click', () => {
       this.el.welcomeSheet.hidden = true;
     });
+    this.root.querySelector('#event-decline').addEventListener('click', () => {
+      this.el.eventSheet.hidden = true;
+      this._eventOnAccept = null;
+    });
+    this.root.querySelector('#event-accept').addEventListener('click', () => {
+      this.el.eventSheet.hidden = true;
+      this._eventOnAccept?.();
+      this._eventOnAccept = null;
+    });
+  }
+
+  /**
+   * Evento casuale con una scelta vera (vedi `EventSystem`): a differenza
+   * dei toast, resta lì finché il giocatore non decide — non deve poter
+   * essere ignorato per sbaglio mentre cammina.
+   */
+  showEvent({ icon, title, desc, accept, decline, onAccept }) {
+    this.el.eventTitle.textContent = title;
+    this.el.eventIcon.textContent = icon;
+    this.el.eventDesc.textContent = desc;
+    this.el.eventAccept.textContent = accept;
+    this.el.eventDecline.textContent = decline;
+    this._eventOnAccept = onAccept;
+    this.el.eventSheet.hidden = false;
   }
 
   /**
@@ -309,7 +350,7 @@ export class HUD {
         const conv = WORKER_TYPES[typeId].conveyor;
         items.push({
           icon: conv.manager ?? '🏭',
-          manager: true,
+          badge: 'MANAGER',
           title: `Manager: ${WORKER_TYPES[typeId].name}`,
           desc: owned
             ? `${conv.label} attivo — vende da solo, senza più bisogno di ritirare`
@@ -320,15 +361,33 @@ export class HUD {
           onBuy: () => { g.workers.buyConveyor(typeId, g); this._renderShop(); },
         });
       }
+
+      // Il "nuovo pozzo" è un secondo traguardo, oltre il nastro: raddoppia
+      // per sempre la resa. Compare solo a chi ha già il manager, così resta
+      // un premio per chi ha portato quell'operaio fino in fondo.
+      if (g.workers.pit2Ready(typeId)) {
+        const owned2 = g.workers.hasPit2(typeId);
+        const pit2 = WORKER_TYPES[typeId].pit2;
+        items.push({
+          icon: pit2.icon ?? '⛰️',
+          badge: 'POZZO',
+          title: pit2.label,
+          desc: owned2 ? `${pit2.label} attivo — resa raddoppiata` : pit2.desc,
+          cost: pit2.cost, can: !owned2 && g.stats.coins >= pit2.cost,
+          maxed: owned2,
+          maxedLabel: owned2 ? '✓ Scavato' : 'MAX',
+          onBuy: () => { g.workers.buyPit2(typeId, g); this._renderShop(); },
+        });
+      }
     }
 
     this.el.shopList.innerHTML = items.map((it, i) => {
       if (it.note) return `<div class="shop-note">${it.note}</div>`;
       return `
-        <div class="shop-item ${it.manager ? 'shop-item-manager' : ''}">
+        <div class="shop-item ${it.badge ? 'shop-item-manager' : ''}">
           <div class="shop-item-icon">${it.icon}</div>
           <div class="shop-item-body">
-            ${it.manager ? '<span class="manager-tag">MANAGER</span>' : ''}
+            ${it.badge ? `<span class="manager-tag">${it.badge}</span>` : ''}
             <div class="shop-item-title">${it.title}</div>
             <div class="shop-item-desc">${it.desc}</div>
           </div>

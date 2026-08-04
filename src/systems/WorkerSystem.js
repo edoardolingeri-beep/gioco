@@ -31,6 +31,8 @@ export class WorkerSystem {
     this.levels = {};
     /** Nastri trasportatori comprati: {typeId: true}. */
     this.conveyors = {};
+    /** "Nuovi pozzi" comprati (raddoppiano la resa): {typeId: true}. */
+    this.pits2 = {};
   }
 
   /**
@@ -84,7 +86,8 @@ export class WorkerSystem {
   /** Quanta risorsa deposita l'operaio a ogni consegna. */
   harvestYield(typeId) {
     const u = WORKER_TYPES[typeId].upgrades.yield;
-    return u.base + this.level(typeId, 'yield') * u.step;
+    const base = u.base + this.level(typeId, 'yield') * u.step;
+    return this.hasPit2(typeId) ? base * WORKER_TYPES[typeId].pit2.yieldMul : base;
   }
 
   /** Capienza attuale del magazzino del cartello. */
@@ -145,6 +148,32 @@ export class WorkerSystem {
     game.cam.addShake(0.3);
     game.fx.confetti(st.x, 1.5, st.z, 28);
     game.hud.toast(`${WORKER_TYPES[typeId].name}: nastro trasportatore installato — vende da solo! 🏭`);
+    return true;
+  }
+
+  /* ------------------------------------------------------------- nuovo pozzo */
+
+  hasPit2(typeId) { return !!this.pits2[typeId]; }
+
+  /** Un traguardo oltre il traguardo: si può scavare solo dopo aver già
+   *  installato il nastro trasportatore — altrimenti raddoppiare una resa
+   *  che il giocatore deve ancora venire a ritirare a mano non si sente. */
+  pit2Ready(typeId) { return this.hasConveyor(typeId); }
+
+  buyPit2(typeId, game) {
+    if (!this.stations[typeId] || this.hasPit2(typeId) || !this.pit2Ready(typeId)) return false;
+    const cost = WORKER_TYPES[typeId].pit2.cost;
+    if (game.stats.coins < cost) return false;
+
+    game.spendCoins(cost);
+    this.pits2[typeId] = true;
+
+    game.audio.upgrade();
+    game.haptics.fire('success', 0);
+    const st = this.stations[typeId];
+    game.cam.addShake(0.4);
+    game.fx.confetti(st.x, 1.6, st.z, 36);
+    game.hud.toast(`${WORKER_TYPES[typeId].pit2.label}: resa raddoppiata! ${WORKER_TYPES[typeId].pit2.icon}`);
     return true;
   }
 }

@@ -16,6 +16,7 @@ import { Entity } from './Entity.js';
 import { CFG } from '../data/config.js';
 import { ENEMY } from '../models/enemies.js';
 import { depthOf, projectY } from '../render/Projection.js';
+import { drawPanel } from '../ui/WorldUI.js';
 import { fxRand } from '../core/Rand.js';
 import {
   clamp, damp, angleTowards, TAU, easeOutCubic, dist,
@@ -289,11 +290,14 @@ export class WolfEntity extends Entity {
       return;
     }
 
-    r.shadow(this.x, this.z, 0.5, 1);
+    r.shadow(this.x, this.z, this.fierce ? 0.62 : 0.5, 1);
     r.sprite(sp, this.x, 0, this.z, {
       depth,
       // Il colpo subito si legge dallo schiacciamento e dalle particelle
-      // rosse: molto più economico di un secondo blit additivo.
+      // rosse: molto più economico di un secondo blit additivo. Il lupo
+      // feroce (evento casuale) è anche più grande: si deve notare da
+      // lontano che non è un lupo qualunque.
+      scale: this.fierce ? 1.25 : 1,
       squash: this.squash * (1 + this.hurtFlash * 0.12),
     });
 
@@ -309,7 +313,17 @@ export class WolfEntity extends Entity {
 
   /** Barra della vita disegnata nella passata UI (coordinate schermo). */
   drawUI(ctx, cam, dpr, game) {
-    if (!this.alive || this.hp >= this.maxHp) return;
+    if (!this.alive) return;
+
+    // Il lupo feroce (evento casuale) si fa riconoscere anche a piena vita:
+    // scala maggiore + questa targhetta, non solo la barra della vita.
+    if (this.fierce) {
+      drawPanel(ctx, cam, dpr, this.x, 1.35, this.z, {
+        title: '🔥 Lupo feroce', appear: 1, width: 140, titleColor: '#ffb27a',
+      });
+    }
+
+    if (this.hp >= this.maxHp) return;
     const sx = this.x * cam.ppu - cam.sx;
     const sy = projectY(1.05, this.z) * cam.ppu - cam.sy;
     const w = 34 * dpr, h = 5 * dpr;

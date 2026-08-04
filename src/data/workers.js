@@ -14,13 +14,21 @@
  * si può comprare il nastro trasportatore (`conveyor`): un capostipite
  * riservato a chi ha già portato resa e magazzino al livello massimo, che
  * vende da solo la scorta per monete, senza bisogno di passare — vedi
- * `WorkerSystem.buyConveyor`.
+ * `WorkerSystem.buyConveyor`. Oltre quello c'è un secondo traguardo,
+ * `pit2` ("nuovo pozzo"): raddoppia la resa per sempre, comprabile solo
+ * dopo il nastro — vedi `WorkerSystem.buyPit2`.
  *
  * `upgrades.yield` e `upgrades.capacity` sono le due leve comprabili dal
  * negozio (vedi `WorkerSystem.buyUpgrade`): quanta risorsa porta a ogni
  * consegna, e quanto grande è il magazzino prima che l'operaio debba
  * aspettare. Ogni livello costa `cost * growth^livelloGiàComprato`, fino a
  * `maxLevel`.
+ *
+ * `stationary: true` (solo il pescatore, per ora) descrive un operaio che
+ * non cerca né trasporta nulla: resta fermo al suo molo (`dockOffX/Z`,
+ * relativo al cartello) e pesca lì — vedi `WorkerEntity._workStationary`.
+ * Serve a introdurre una risorsa legata al fiume senza dover disegnare
+ * (e cuocere) una sprite apposta per ogni "punto pesca".
  */
 
 export const WORKER_TYPES = {
@@ -59,6 +67,10 @@ export const WORKER_TYPES = {
       label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
       cost: 6000, manager: '🧔',
     },
+    pit2: {
+      label: 'Nuovo bosco', desc: 'Un secondo filare di alberi da abbattere: raddoppia la resa di ogni consegna',
+      cost: 20000, yieldMul: 2, icon: '🌲',
+    },
   },
   miner: {
     id: 'miner',
@@ -86,6 +98,10 @@ export const WORKER_TYPES = {
     conveyor: {
       label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
       cost: 7500, manager: '⛑️',
+    },
+    pit2: {
+      label: 'Nuova cava', desc: 'Un secondo fronte di roccia: raddoppia la resa di ogni consegna',
+      cost: 26000, yieldMul: 2, icon: '⛰️',
     },
   },
   ironminer: {
@@ -118,6 +134,10 @@ export const WORKER_TYPES = {
       label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
       cost: 11000, manager: '🦾',
     },
+    pit2: {
+      label: 'Nuova vena', desc: 'Una seconda vena di ferro: raddoppia la resa di ogni consegna',
+      cost: 38000, yieldMul: 2, icon: '🗻',
+    },
   },
   goldminer: {
     id: 'goldminer',
@@ -146,6 +166,47 @@ export const WORKER_TYPES = {
     conveyor: {
       label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
       cost: 16000, manager: '🕴️',
+    },
+    pit2: {
+      label: 'Nuovo filone', desc: 'Un secondo filone aurifero: raddoppia la resa di ogni consegna',
+      cost: 55000, yieldMul: 2, icon: '💎',
+    },
+  },
+  fisherman: {
+    id: 'fisherman',
+    name: 'Pescatore',
+    building: 'bridge',
+    resource: 'fish',
+    icon: '🎣',
+    hireCost: 320,
+    costGrowth: 2.6,
+    maxWorkers: 3,
+    workTime: 5.2,
+    // Non cerca né trasporta nulla: pesca da fermo al suo molo, un passo
+    // più vicino all'acqua rispetto al cartello (vedi la nota in cima al
+    // file su `stationary`).
+    stationary: true,
+    dockOffX: 0, dockOffZ: 1.3,
+    // Sponda SUD, vicino al ponte ma senza bisogno che sia già stato
+    // costruito il ponte per raggiungerlo: il fiume qui è già di casa.
+    stationSpot: { x: 7, z: -13.5 },
+    upgrades: {
+      yield: {
+        label: 'Resa del pescatore', desc: 'Più pesce per ogni battuta',
+        base: 1, step: 1, cost: 220, growth: 1.42, maxLevel: 10,
+      },
+      capacity: {
+        label: 'Cesta del pescatore', desc: 'Il cartello accumula di più prima di riempirsi',
+        base: 20, step: 15, cost: 170, growth: 1.36, maxLevel: 10,
+      },
+    },
+    conveyor: {
+      label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
+      cost: 9000, manager: '🧢',
+    },
+    pit2: {
+      label: 'Nuova insenatura', desc: 'Un secondo tratto di fiume pescoso: raddoppia la resa di ogni battuta',
+      cost: 32000, yieldMul: 2, icon: '🌊',
     },
   },
 };
