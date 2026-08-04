@@ -12,12 +12,25 @@
 
   --bg: #1d2a1b;
   --panel: rgba(30, 28, 44, 0.92);
+  --panel-2: linear-gradient(180deg, rgba(52, 48, 78, .96), rgba(28, 26, 42, .97));
   --panel-line: rgba(255, 255, 255, 0.14);
   --text: #ffffff;
   --gold: #ffce54;
   --green: #6ee7a0;
   --blue: #7cc8ff;
   --danger: #ff7a6b;
+
+  /* Toni "da tycoon": pannelli a gradiente e pulsanti in rilievo 3D,
+     ispirati alle interfacce dei giochi idle da mobile. */
+  --header-blue: linear-gradient(135deg, #57b2ef 0%, #2f7fd6 55%, #1f5f9e 100%);
+  --bevel-green: linear-gradient(180deg, #9bf5c0 0%, #5ad795 55%, #35b273 100%);
+  --bevel-green-edge: #1c7e49;
+  --bevel-blue: linear-gradient(180deg, #8fd6ff 0%, #4fa8ec 55%, #2f7fd6 100%);
+  --bevel-blue-edge: #1f5f9e;
+  --bevel-neutral: linear-gradient(180deg, #5c5680 0%, #423c62 55%, #322c4a 100%);
+  --bevel-neutral-edge: #1c1830;
+  --bevel-danger: linear-gradient(180deg, #ff9d8f 0%, #f16d5c 55%, #d6503f 100%);
+  --bevel-danger-edge: #9c2e20;
 
   --font: 800 16px/1.25 system-ui, -apple-system, "Segoe UI Variable",
           "Segoe UI", Roboto, "Helvetica Neue", sans-serif;

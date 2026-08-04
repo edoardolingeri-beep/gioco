@@ -28,16 +28,31 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px 8px 10px;
-  border-radius: 18px;
-  background: var(--panel);
+  padding: 6px 14px 6px 6px;
+  border-radius: 20px;
+  background: var(--panel-2);
   border: 1.5px solid var(--panel-line);
-  box-shadow: 0 6px 18px rgba(0,0,0,.32);
+  border-bottom: 2.5px solid rgba(0,0,0,.4);
+  box-shadow: 0 6px 18px rgba(0,0,0,.32), 0 1px 0 rgba(255,255,255,.08) inset;
   backdrop-filter: blur(8px);
   transform-origin: center;
 }
 
-.chip-icon { font-size: 20px; line-height: 1; }
+.chip-icon {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  line-height: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255,255,255,.4), rgba(255,255,255,0) 62%),
+    rgba(255,255,255,.09);
+  box-shadow: 0 2px 5px rgba(0,0,0,.35) inset, 0 1px 0 rgba(255,255,255,.1);
+}
 
 .chip-body { display: flex; flex-direction: column; gap: 4px; min-width: 62px; }
 
@@ -81,19 +96,20 @@
 
 .icon-btn {
   margin-left: auto;
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
   border: 1.5px solid var(--panel-line);
-  background: var(--panel);
+  border-bottom: 3px solid rgba(0,0,0,.4);
+  background: var(--panel-2);
   color: #fff;
-  font-size: 18px;
-  box-shadow: 0 6px 18px rgba(0,0,0,.32);
+  font-size: 19px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.32), 0 1px 0 rgba(255,255,255,.08) inset;
   backdrop-filter: blur(8px);
   cursor: pointer;
-  transition: transform .12s ease;
+  transition: transform .1s ease, border-bottom-width .1s ease;
 }
-.icon-btn:active { transform: scale(.92); }
+.icon-btn:active { transform: translateY(2px) scale(.97); border-bottom-width: 1px; }
 
 /* ---------------------------------------------------------------- toast */
 
@@ -141,14 +157,15 @@
 
 .sheet-card {
   width: min(360px, 86vw);
-  padding: 22px;
-  border-radius: 24px;
-  background: #262238;
+  padding: 0 20px 20px;
+  border-radius: 26px;
+  background: linear-gradient(180deg, #2c2842, #211d34);
   border: 1.5px solid var(--panel-line);
-  box-shadow: 0 24px 60px rgba(0,0,0,.5);
+  box-shadow: 0 24px 60px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.06) inset;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow: hidden;
   animation: rise .28s cubic-bezier(.2,.9,.3,1.3);
 }
 
@@ -157,7 +174,21 @@
   to   { transform: none; opacity: 1; }
 }
 
-.sheet-card h2 { font-size: 19px; font-weight: 900; margin-bottom: 4px; }
+/* Cartiglio a strisce diagonali in stile "tycoon": lo stesso trucco dei
+   giochi idle mobile per rendere subito riconoscibile il titolo pannello. */
+.sheet-card h2 {
+  font-size: 19px;
+  font-weight: 900;
+  margin: 0 -20px 6px;
+  padding: 18px 20px 14px;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0,0,0,.25);
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.1) 0 10px, rgba(255,255,255,0) 10px 20px),
+    var(--header-blue);
+  border-radius: 26px 26px 0 0;
+  box-shadow: 0 3px 0 rgba(0,0,0,.22) inset, 0 4px 10px rgba(0,0,0,.3);
+}
 
 .row {
   display: flex;
@@ -166,6 +197,7 @@
   padding: 10px 12px;
   border-radius: 14px;
   background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.06);
   font-size: 14px;
   font-weight: 700;
 }
@@ -204,7 +236,9 @@
   gap: 2px;
   padding: 10px 4px;
   border-radius: 14px;
-  background: rgba(255,255,255,.05);
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+  border: 1px solid rgba(255,255,255,.07);
+  border-bottom: 2px solid rgba(0,0,0,.25);
 }
 .stat-row b { font-size: 17px; font-weight: 900; }
 .stat-row span { font-size: 10px; opacity: .6; font-weight: 700; text-transform: uppercase; }
@@ -212,16 +246,22 @@
 .btn {
   padding: 13px;
   border-radius: 16px;
-  border: none;
-  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.14);
+  border-bottom: 3px solid var(--bevel-neutral-edge);
+  background: var(--bevel-neutral);
   color: #fff;
   font-size: 15px;
   font-weight: 800;
+  text-shadow: 0 1px 0 rgba(0,0,0,.3);
   cursor: pointer;
-  transition: transform .12s ease, background .12s ease;
+  transition: transform .1s ease, border-bottom-width .1s ease;
 }
-.btn:active { transform: scale(.97); }
-.btn.danger { background: rgba(255,122,107,.2); color: var(--danger); }
+.btn:active { transform: translateY(2px); border-bottom-width: 1px; }
+.btn.danger {
+  background: var(--bevel-danger);
+  border-bottom-color: var(--bevel-danger-edge);
+  color: #fff;
+}
 
 /* ------------------------------------------------ salute e villaggio (Fase 2) */
 
@@ -284,7 +324,21 @@
 }
 .quest[hidden] { display: none; }
 
-.quest-icon { font-size: 19px; line-height: 1; flex: none; }
+.quest-icon {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255,255,255,.4), rgba(255,255,255,0) 62%),
+    rgba(255,255,255,.09);
+  box-shadow: 0 2px 5px rgba(0,0,0,.3) inset;
+}
 
 .quest-body { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 
@@ -337,15 +391,25 @@
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(255,255,255,.05);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+  border: 1px solid rgba(255,255,255,.07);
+  border-bottom: 2px solid rgba(0,0,0,.25);
 }
 
 .shop-item-icon {
   flex: none;
-  width: 34px;
-  font-size: 20px;
-  text-align: center;
+  width: 38px;
+  height: 38px;
+  font-size: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255,255,255,.4), rgba(255,255,255,0) 62%),
+    rgba(255,255,255,.09);
+  box-shadow: 0 2px 5px rgba(0,0,0,.3) inset;
 }
 
 .shop-item-body { flex: 1; min-width: 0; }
@@ -367,12 +431,17 @@
   flex: none;
   padding: 9px 12px;
   font-size: 13px;
-  background: var(--green);
-  color: #103018;
+  background: var(--bevel-green);
+  border-bottom-color: var(--bevel-green-edge);
+  color: #0d3a20;
+  text-shadow: 0 1px 0 rgba(255,255,255,.25);
 }
 .shop-buy:disabled {
   background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.1);
+  border-bottom: 3px solid rgba(0,0,0,.2);
   color: rgba(255,255,255,.4);
+  text-shadow: none;
   cursor: default;
 }
 
