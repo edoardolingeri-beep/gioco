@@ -37,13 +37,27 @@ export function drawPanel(ctx, cam, dpr, x, y, z, o) {
   const hasBar = o.max != null;
   const h = (hasBar ? 46 : 30) * S;
 
+  // Molti titoli iniziano con un'emoji ("⛏️ Minatore al lavoro…"): su
+  // certi motori (Safari/iOS in testa) `measureText` non la misura con la
+  // stessa larghezza con cui viene poi disegnata, e un unico `fillText`
+  // centrato finisce per non essere centrato affatto — tutto il gruppo si
+  // sposta di quel disallineamento. La separiamo: il testo (misurabile in
+  // modo affidabile) si centra da solo, l'emoji le sta accanto a sinistra
+  // con uno spazio fisso, senza contare per il centraggio.
+  ctx.font = `800 ${13 * S}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+  const iconMatch = /^(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)\s(.+)$/u.exec(o.title);
+  const titleIcon = iconMatch ? iconMatch[1] : null;
+  const titleText = iconMatch ? iconMatch[2] : o.title;
+  const titleTextW = ctx.measureText(titleText).width;
+  const iconGap = 6 * S;
+  const titleIconW = titleIcon ? ctx.measureText(titleIcon).width + iconGap : 0;
+
   // Il riquadro non ha una larghezza fissa: la calibriamo sul testo vero
   // (titolo, ed etichetta della barra se c'è), altrimenti un titolo più
   // lungo del previsto sborda fuori dagli angoli arrotondati — non è
   // "storto", è solo troppo stretto per quello che ci scriviamo dentro.
   // `o.width` resta come larghezza minima, per i pannelli con poco testo.
-  ctx.font = `800 ${13 * S}px system-ui, -apple-system, "Segoe UI", sans-serif`;
-  let w = Math.max((o.width ?? 132) * S, ctx.measureText(o.title).width + 28 * S);
+  let w = Math.max((o.width ?? 132) * S, titleTextW + titleIconW + 28 * S);
   if (hasBar) {
     ctx.font = `900 ${11 * S}px system-ui, -apple-system, sans-serif`;
     const barLabel = `${o.value}/${o.max} ${o.icon ?? ''}`;
@@ -85,13 +99,21 @@ export function drawPanel(ctx, cam, dpr, x, y, z, o) {
   ctx.lineTo(px + w - 12 * S, py + h - 1 * S);
   ctx.stroke();
 
-  // titolo
-  ctx.textAlign = 'center';
+  // titolo — il testo si centra sul proprio (affidabile) `titleTextW`;
+  // l'emoji, se c'è, gli sta accanto senza influenzare quel centraggio
+  // (vedi il commento più sopra sul perché).
   ctx.textBaseline = 'middle';
   ctx.font = `800 ${13 * S}px system-ui, -apple-system, "Segoe UI", sans-serif`;
   ctx.fillStyle = o.titleColor ?? '#ffffff';
   const titleY = py + (hasBar ? 14 * S : h / 2);
-  ctx.fillText(o.title, sx, titleY);
+  const textCenterX = sx + titleIconW / 2;
+  ctx.textAlign = 'center';
+  ctx.fillText(titleText, textCenterX, titleY);
+  if (titleIcon) {
+    ctx.textAlign = 'right';
+    ctx.fillText(titleIcon, textCenterX - titleTextW / 2 - iconGap, titleY);
+    ctx.textAlign = 'center';
+  }
 
   if (hasBar) {
     const bw = w - 20 * S;
