@@ -82,6 +82,7 @@ export class DeliverySystem {
         : f.kind === 'stone' ? assets.stoneDrop
         : f.kind === 'iron' ? assets.ironDrop
         : f.kind === 'gold' ? assets.goldDrop
+        : f.kind === 'fish' ? assets.fishDrop
         : assets.logDrop;
       r.sprite(sp, f.x, f.y, f.z, {
         rot: f.rot * 0.4,

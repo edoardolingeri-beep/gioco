@@ -208,6 +208,7 @@ export class AssetForge {
       A.stoneDrop = this._bakeProp(Nature.buildStoneDrop(), 1.5);
       A.ironDrop = this._bakeProp(Town.buildIronDrop(), 1.5);
       A.goldDrop = this._bakeProp(City.buildGoldDrop(), 1.5);
+      A.fishDrop = this._bakeProp(Nature.buildFishDrop(), 1.5);
       A.coin = this._bakeProp(Nature.buildCoin(), 1.5);
       A.alertMark = this._bakeProp(buildAlertMark(), 1.5);
     });
@@ -215,6 +216,7 @@ export class AssetForge {
       A.carriedStones = [];
       A.carriedIrons = [];
       A.carriedGolds = [];
+      A.carriedFishes = [];
       for (let d = 0; d < CHAR.dirs; d++) {
         const a = (d / CHAR.dirs) * Math.PI * 2;
         const st = Nature.buildCarriedStone();
@@ -226,6 +228,9 @@ export class AssetForge {
         const go = City.buildCarriedGold();
         rotateMeshY(go, a);
         A.carriedGolds.push(bakeMesh(go, { outline: 1.4 }));
+        const fi = Nature.buildCarriedFish();
+        rotateMeshY(fi, a);
+        A.carriedFishes.push(bakeMesh(fi, { outline: 1.4 }));
       }
     });
 

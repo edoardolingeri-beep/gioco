@@ -327,6 +327,50 @@ export function buildCarriedStone() {
   return g;
 }
 
+/** Pesciolino a terra (drop raccoglibile del pescatore). */
+export function buildFishDrop() {
+  const g = M.mesh();
+  const body = M.sphere(0.14, 6, 5, PAL.fishBody);
+  M.scale(body, 1.5, 0.6, 0.8);
+  M.merge(g, body);
+  const belly = M.sphere(0.09, 5, 4, PAL.fishBelly);
+  M.scale(belly, 1.2, 0.38, 0.55);
+  M.translate(belly, 0.01, -0.05, 0);
+  M.merge(g, belly);
+  const tail = M.sphere(0.065, 5, 4, PAL.fishFin);
+  M.scale(tail, 1, 1.7, 0.3);
+  M.translate(tail, -0.18, 0, 0);
+  M.merge(g, tail);
+  const fin = M.sphere(0.045, 4, 3, PAL.fishFin);
+  M.scale(fin, 0.9, 1.2, 0.3);
+  M.translate(fin, 0.02, 0.12, 0);
+  M.merge(g, fin);
+  M.translate(g, 0, 0.15, 0);
+  return { mesh: g, height: 0.24, radius: 0.2 };
+}
+
+/** Lo stesso pesce, trasportato sulla schiena (impilabile). */
+export function buildCarriedFish() {
+  const g = M.mesh();
+  const body = M.sphere(0.15, 6, 5, PAL.fishBody);
+  M.scale(body, 1.4, 0.6, 0.78);
+  M.merge(g, body);
+  const belly = M.sphere(0.095, 5, 4, PAL.fishBelly);
+  M.scale(belly, 1.15, 0.38, 0.52);
+  M.translate(belly, 0.01, -0.04, 0);
+  M.merge(g, belly);
+  const tail = M.sphere(0.07, 5, 4, PAL.fishFin);
+  M.scale(tail, 1, 1.6, 0.3);
+  M.translate(tail, -0.19, 0, 0);
+  M.merge(g, tail);
+  const fin = M.sphere(0.05, 4, 3, PAL.fishFin);
+  M.scale(fin, 0.9, 1.2, 0.3);
+  M.translate(fin, 0.02, 0.13, 0);
+  M.merge(g, fin);
+  M.translate(g, 0, -0.08, 0);
+  return g;
+}
+
 /** Moneta (ruotata di taglio, stile arcade). */
 export function buildCoin() {
   const g = M.cylinder(0.16, 0.16, 0.04, 8, PAL.coin, { centerY: true });

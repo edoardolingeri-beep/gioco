@@ -303,6 +303,7 @@ export class WorkerEntity extends Entity {
       const byType = {
         wood: A.carriedLogs?.[di16], stone: A.carriedStones?.[di16],
         iron: A.carriedIrons?.[di16], gold: A.carriedGolds?.[di16],
+        fish: A.carriedFishes?.[di16],
       };
       const sp2 = byType[this.carrying];
       if (sp2) {

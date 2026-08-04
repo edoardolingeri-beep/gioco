@@ -17,7 +17,7 @@ export class CarrySystem {
      *  che rendono la catasta irregolare e credibile. */
     this.stack = [];
     /** Conteggi rapidi per tipo. */
-    this.counts = { wood: 0, stone: 0, iron: 0, gold: 0 };
+    this.counts = { wood: 0, stone: 0, iron: 0, gold: 0, fish: 0 };
   }
 
   get total() { return this.stack.length; }

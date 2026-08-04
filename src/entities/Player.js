@@ -468,6 +468,7 @@ export class Player extends Entity {
       stone: A.carriedStones ? A.carriedStones[di] : A.carriedLog,
       iron: A.carriedIrons ? A.carriedIrons[di] : A.carriedLog,
       gold: A.carriedGolds ? A.carriedGolds[di] : A.carriedLog,
+      fish: A.carriedFishes ? A.carriedFishes[di] : A.carriedLog,
     };
 
     const n = stack.length;

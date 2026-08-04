@@ -28,6 +28,11 @@ export const PAL = {
   stoneDark:  [122, 128, 142],
   stoneLight: [178, 184, 196],
 
+  /* pesce (pescatore) */
+  fishBody:   [104, 172, 214],
+  fishBelly:  [210, 232, 240],
+  fishFin:    [ 76, 136, 178],
+
   /* personaggio */
   skin:       [244, 194, 152],
   skinDark:   [214, 160, 120],
