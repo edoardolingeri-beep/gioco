@@ -37,7 +37,7 @@ const { chromium } = require('playwright');
   const before = await page.evaluate(() =>
     Array.from(document.querySelectorAll('.shop-item-title')).map((e) => e.textContent));
   console.log('NEGOZIO PRIMA DEI POTENZIAMENTI:', JSON.stringify(before));
-  console.log('nastro assente all\'inizio:', !before.some((t) => t.includes('Nastro')) ? '✓' : '✗');
+  console.log('nastro assente all\'inizio:', !before.some((t) => t.includes('Manager')) ? '✓' : '✗');
   await page.click('#shop-close');
 
   // porta resa e magazzino del boscaiolo al livello 10
@@ -65,13 +65,13 @@ const { chromium } = require('playwright');
       hasMax: !!el.querySelector('.shop-max'),
     })));
   console.log('NEGOZIO A LIVELLO MASSIMO:', JSON.stringify(afterMax));
-  const conveyorRow = afterMax.find((r) => r.title?.includes('Nastro'));
+  const conveyorRow = afterMax.find((r) => r.title?.includes('Manager'));
   console.log('nastro ora visibile e comprabile:', conveyorRow && !conveyorRow.hasMax ? '✓' : '✗');
 
-  // compra il nastro dal pannello
+  // compra il nastro (presentato in negozio come l'assunzione di un "manager")
   const bought = await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll('.shop-item'));
-    const row = rows.find((r) => r.querySelector('.shop-item-title')?.textContent.includes('Nastro'));
+    const row = rows.find((r) => r.querySelector('.shop-item-title')?.textContent.includes('Manager'));
     const btn = row?.querySelector('.shop-buy');
     if (!btn) return false;
     btn.click();

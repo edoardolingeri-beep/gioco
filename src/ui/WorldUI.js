@@ -62,16 +62,27 @@ export function drawPanel(ctx, cam, dpr, x, y, z, o) {
   ctx.save();
   ctx.globalAlpha = clamp(app, 0, 1);
 
-  // ombra + fondo
+  // ombra + fondo — un leggero gradiente verticale al posto del colore
+  // piatto, con un bordo inferiore più scuro: dà l'idea di rilievo, come i
+  // pulsanti e i pannelli dell'interfaccia in sovrimpressione.
   ctx.fillStyle = 'rgba(18,16,28,0.55)';
   roundRect(ctx, px, py + 2 * S, w, h, 12 * S);
   ctx.fill();
-  ctx.fillStyle = 'rgba(30,28,44,0.9)';
+  const grad = ctx.createLinearGradient(px, py, px, py + h);
+  grad.addColorStop(0, 'rgba(56,52,84,0.92)');
+  grad.addColorStop(1, 'rgba(24,22,36,0.92)');
+  ctx.fillStyle = grad;
   roundRect(ctx, px, py, w, h, 12 * S);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.16)';
   ctx.lineWidth = 1.5 * S;
   roundRect(ctx, px, py, w, h, 12 * S);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+  ctx.lineWidth = 2 * S;
+  ctx.beginPath();
+  ctx.moveTo(px + 12 * S, py + h - 1 * S);
+  ctx.lineTo(px + w - 12 * S, py + h - 1 * S);
   ctx.stroke();
 
   // titolo

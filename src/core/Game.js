@@ -38,6 +38,7 @@ import { drawOffscreenArrow } from '../ui/WorldUI.js';
 import { fxRand } from './Rand.js';
 import { BUILD_STATE } from '../entities/BuildingEntity.js';
 import { BUILD_ORDER, BUILDINGS } from '../data/buildings.js';
+import { WORKER_TYPES } from '../data/workers.js';
 
 const SAVE_KEY = 'gioco.save.v1';
 const SAVE_VERSIONS = [1, 2, 3, 4, 5];
@@ -138,6 +139,13 @@ export class Game {
     window.addEventListener('keydown', unlock, { once: true });
 
     this.load();
+    if (this._offlineReport) {
+      const report = this._offlineReport;
+      this._offlineReport = null;
+      // Un attimo dopo che la schermata di caricamento è sparita: prima
+      // il mondo, poi la notizia di quello che è successo mentre eri via.
+      setTimeout(() => this.hud.showWelcomeBack(report), 900);
+    }
     this._wireEvents();
     this._autoSave = 0;
   }
@@ -488,9 +496,67 @@ export class Game {
         buildings,
         player: { x: this.player.x, z: this.player.z },
         carry: this.carry.stack.map((s) => s.type),
+        ts: Date.now(),
       };
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch { /* spazio esaurito o modalità privata: si continua senza */ }
+  }
+
+  /**
+   * Stima cosa avrebbero prodotto gli operai già assunti (e la rendita della
+   * banca) nel tempo reale passato da fuori dal gioco. Non è una simulazione
+   * — il mondo non esiste ad app chiusa — solo una stima ragionevole basata
+   * sui ritmi di lavoro noti, con un tetto per non premiare assenze lunghe
+   * quanto una sessione vera. Aggiorna `data.coins`/`data.workersStock` sul
+   * posto, così il resto di `load()` li legge già comprensivi del bottino.
+   */
+  _computeOfflineGains(data) {
+    if (!data.ts) return null;
+    const awaySec = (Date.now() - data.ts) / 1000;
+    if (!(awaySec >= CFG.offline.minSeconds)) return null;
+    const sec = Math.min(awaySec, CFG.offline.maxSeconds);
+
+    const counts = data.workers ?? {};
+    const levels = data.workersLevels ?? {};
+    const conveyors = data.workersConveyors ?? {};
+    const stock = { ...(data.workersStock ?? {}) };
+    const resources = {};
+    let coins = 0;
+
+    for (const typeId in WORKER_TYPES) {
+      const count = counts[typeId] ?? 0;
+      if (count <= 0) continue;
+      const def = WORKER_TYPES[typeId];
+      const lvl = levels[typeId] ?? { yield: 0, capacity: 0 };
+      const yieldAmt = def.upgrades.yield.base + (lvl.yield ?? 0) * def.upgrades.yield.step;
+      const cap = def.upgrades.capacity.base + (lvl.capacity ?? 0) * def.upgrades.capacity.step;
+      // Tempo medio di un ciclo completo (cerca, vai, lavora, torna): non è
+      // simulabile a ritroso, quindi si approssima da `workTime`.
+      const cycleTime = def.workTime * CFG.offline.cycleFactor;
+      const produced = (sec / cycleTime) * yieldAmt * count;
+
+      if (conveyors[typeId]) {
+        const price = CFG.economy.prices[def.resource] ?? 1;
+        coins += produced * price * (data.sellBonus ?? 1);
+      } else {
+        const before = stock[typeId] ?? 0;
+        const after = Math.min(cap, before + produced);
+        if (after > before) {
+          resources[def.resource] = (resources[def.resource] ?? 0) + (after - before);
+          stock[typeId] = after;
+        }
+      }
+    }
+
+    if (data.income > 0) coins += (sec / 6) * data.income;
+
+    coins = Math.round(coins);
+    for (const k in resources) resources[k] = Math.round(resources[k]);
+    if (coins <= 0 && Object.keys(resources).length === 0) return null;
+
+    data.workersStock = stock;
+    data.coins = (data.coins ?? 0) + coins;
+    return { awaySec: sec, coins, resources };
   }
 
   load() {
@@ -499,6 +565,12 @@ export class Game {
     // I salvataggi della Fase 1 restano validi: i campi nuovi prendono il
     // valore predefinito e la partita riprende senza perdere nulla.
     if (!data || !SAVE_VERSIONS.includes(data.v)) { this.recomputeStats(); return; }
+
+    // Guadagni in assenza: il ciclo di gioco non gira ad app chiusa, quindi
+    // vanno stimati dal tempo reale trascorso, non simulati passo passo.
+    // Va fatto QUI, prima di leggere `data.coins`/`data.workersStock` qui
+    // sotto: la funzione li aggiorna sul posto.
+    this._offlineReport = this._computeOfflineGains(data);
 
     const s = this.stats;
     s.coins = data.coins ?? 0;

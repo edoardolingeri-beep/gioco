@@ -57,7 +57,7 @@ export const WORKER_TYPES = {
     },
     conveyor: {
       label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
-      cost: 6000,
+      cost: 6000, manager: '🧔',
     },
   },
   miner: {
@@ -85,7 +85,7 @@ export const WORKER_TYPES = {
     },
     conveyor: {
       label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
-      cost: 7500,
+      cost: 7500, manager: '⛑️',
     },
   },
   ironminer: {
@@ -116,7 +116,7 @@ export const WORKER_TYPES = {
     },
     conveyor: {
       label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
-      cost: 11000,
+      cost: 11000, manager: '🦾',
     },
   },
   goldminer: {
@@ -145,7 +145,7 @@ export const WORKER_TYPES = {
     },
     conveyor: {
       label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
-      cost: 16000,
+      cost: 16000, manager: '🕴️',
     },
   },
 };

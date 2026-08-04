@@ -419,6 +419,37 @@
   font-weight: 800;
 }
 
+/* La card del "manager" (nastro trasportatore): un ritratto invece della
+   solita icona tonda, e un contorno dorato per farla risaltare dal resto
+   del negozio — è un traguardo, non un potenziamento come gli altri. */
+.shop-item-manager {
+  background: linear-gradient(180deg, rgba(255,206,84,.14), rgba(255,206,84,.04));
+  border: 1px solid rgba(255,206,84,.35);
+  border-bottom: 2px solid rgba(180,130,20,.4);
+}
+.shop-item-manager .shop-item-icon {
+  width: 46px;
+  height: 46px;
+  font-size: 24px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255,255,255,.4), rgba(255,255,255,0) 62%),
+    linear-gradient(180deg, #4a4568, #2c2840);
+  border: 2px solid var(--gold);
+  box-shadow: 0 2px 6px rgba(0,0,0,.35) inset, 0 2px 8px rgba(255,206,84,.3);
+}
+.manager-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  color: #4a3410;
+  background: var(--gold);
+  border-radius: 6px;
+  padding: 1px 6px;
+  margin-bottom: 3px;
+}
+
 .shop-item-desc {
   font-size: 11px;
   font-weight: 600;
@@ -460,3 +491,32 @@
   opacity: .7;
   padding: 12px 0;
 }
+
+/* ------------------------------------------------------ bentornato (offline) */
+
+.welcome-card { align-items: center; text-align: center; }
+
+.welcome-away {
+  font-size: 13px;
+  font-weight: 700;
+  opacity: .75;
+  line-height: 1.4;
+}
+
+.welcome-mascot {
+  width: 84px;
+  height: 84px;
+  margin: 2px auto;
+  font-size: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255,255,255,.3), rgba(255,255,255,0) 62%),
+    var(--bevel-blue);
+  box-shadow: 0 6px 16px rgba(0,0,0,.35), 0 2px 0 rgba(255,255,255,.16) inset;
+}
+
+.welcome-stats { grid-template-columns: repeat(2, 1fr); width: 100%; }
+.welcome-stats b { color: var(--gold); }

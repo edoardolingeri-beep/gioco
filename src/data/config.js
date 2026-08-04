@@ -110,6 +110,20 @@ export const CFG = {
     prices: { wood: 2, stone: 5, iron: 14, gold: 46 },
   },
 
+  /* --------------------------------------------------- guadagni in assenza */
+  offline: {
+    // Sotto questa soglia (secondi) non vale la pena mostrare il
+    // popup — un ricarico rapido della pagina non è "essere stati via".
+    minSeconds: 90,
+    // Oltre questo tetto (4 ore) i guadagni non crescono più: un ritorno
+    // dopo giorni non deve fruttare quanto uno vero e proprio offline.
+    maxSeconds: 4 * 3600,
+    // Tempo "medio" di un ciclo completo di un operaio (cerca+vai+lavora+
+    // torna), come multiplo di `workTime`: approssima il tempo che passa
+    // davvero raccogliendo, senza dover simulare il mondo a ritroso.
+    cycleFactor: 5,
+  },
+
   /* ------------------------------------------------------------- fiume */
   river: {
     baseZ: -19,     // posizione media del corso

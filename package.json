@@ -19,7 +19,7 @@
     "test:phase3": "node tools/phase3-test.cjs",
     "test:phase4": "node tools/phase4-test.cjs",
     "test:phase5": "node tools/phase5-test.cjs",
-    "test:all": "node tools/smoke-test.cjs && node tools/phase2-test.cjs && node tools/phase3-test.cjs && node tools/phase4-test.cjs && node tools/phase5-test.cjs && node tools/daynight-test.cjs && node tools/music-test.cjs && node tools/worker-test.cjs && node tools/fence-test.cjs && node tools/npc-gate-test.cjs && node tools/shop-test.cjs && node tools/bear-test.cjs && node tools/tower-test.cjs && node tools/conveyor-test.cjs && node tools/village-expand-test.cjs && node tools/allworkers-test.cjs && node tools/worker-stuck-test.cjs && node tools/npc-crowd-test.cjs",
+    "test:all": "node tools/smoke-test.cjs && node tools/phase2-test.cjs && node tools/phase3-test.cjs && node tools/phase4-test.cjs && node tools/phase5-test.cjs && node tools/daynight-test.cjs && node tools/music-test.cjs && node tools/worker-test.cjs && node tools/fence-test.cjs && node tools/npc-gate-test.cjs && node tools/shop-test.cjs && node tools/bear-test.cjs && node tools/tower-test.cjs && node tools/conveyor-test.cjs && node tools/village-expand-test.cjs && node tools/allworkers-test.cjs && node tools/worker-stuck-test.cjs && node tools/npc-crowd-test.cjs && node tools/welcome-back-test.cjs",
     "test:daynight": "node tools/daynight-test.cjs",
     "test:music": "node tools/music-test.cjs",
     "shots:quest": "node tools/quest-shots.cjs",
@@ -33,7 +33,8 @@
     "test:villageexpand": "node tools/village-expand-test.cjs",
     "test:allworkers": "node tools/allworkers-test.cjs",
     "test:workerstuck": "node tools/worker-stuck-test.cjs",
-    "test:npccrowd": "node tools/npc-crowd-test.cjs"
+    "test:npccrowd": "node tools/npc-crowd-test.cjs",
+    "test:welcomeback": "node tools/welcome-back-test.cjs"
   },
   "license": "MIT",
   "devDependencies": {

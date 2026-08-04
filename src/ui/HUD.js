@@ -76,6 +76,18 @@ export class HUD {
           <button class="btn" id="shop-close">Chiudi</button>
         </div>
       </div>
+
+      <!-- Riepilogo di ciò che gli operai (e la banca) hanno prodotto
+           mentre l'app era chiusa — vedi Game._computeOfflineGains -->
+      <div class="sheet" id="hud-welcome-sheet" data-ui hidden>
+        <div class="sheet-card welcome-card">
+          <h2>Bentornato! 👋</h2>
+          <div class="welcome-away" id="welcome-away"></div>
+          <div class="welcome-mascot" id="welcome-mascot">👷</div>
+          <div id="welcome-list"></div>
+          <button class="btn" id="welcome-close">Fantastico!</button>
+        </div>
+      </div>
     `;
 
     this.el = {
@@ -99,6 +111,10 @@ export class HUD {
       questBar: this.root.querySelector('#hud-quest-bar'),
       questCount: this.root.querySelector('#hud-quest-count'),
       healthFill: this.root.querySelector('#hud-health-fill'),
+      welcomeSheet: this.root.querySelector('#hud-welcome-sheet'),
+      welcomeAway: this.root.querySelector('#welcome-away'),
+      welcomeMascot: this.root.querySelector('#welcome-mascot'),
+      welcomeList: this.root.querySelector('#welcome-list'),
     };
 
     this.healthShown = 1;
@@ -163,6 +179,37 @@ export class HUD {
     this.root.querySelector('#opt-debug').addEventListener('change', (e) => {
       g.showDebug = e.target.checked;
     });
+    this.root.querySelector('#welcome-close').addEventListener('click', () => {
+      this.el.welcomeSheet.hidden = true;
+    });
+  }
+
+  /**
+   * Popup "bentornato": cosa hanno prodotto operai e banca mentre l'app era
+   * chiusa (vedi `Game._computeOfflineGains`). Chiamato una volta sola,
+   * subito dopo l'avvio, solo se c'è davvero qualcosa da mostrare.
+   */
+  showWelcomeBack(report) {
+    const mins = Math.round(report.awaySec / 60);
+    const h = Math.floor(mins / 60), m = mins % 60;
+    this.el.welcomeAway.textContent = h > 0
+      ? `I tuoi operai hanno lavorato per ${h}h ${m}min mentre eri via`
+      : `I tuoi operai hanno lavorato per ${m} minuti mentre eri via`;
+
+    const icons = Object.keys(report.resources).map((t) => RESOURCE_INFO[t]?.icon).filter(Boolean);
+    this.el.welcomeMascot.textContent = icons[0] ?? '👷';
+
+    const rows = [];
+    for (const type in report.resources) {
+      const info = RESOURCE_INFO[type];
+      rows.push(`<div><b>+${report.resources[type]}</b><span>${info?.icon ?? ''} ${info?.label ?? type}</span></div>`);
+    }
+    if (report.coins > 0) rows.push(`<div><b>+${report.coins}</b><span>🪙 Monete</span></div>`);
+    this.el.welcomeList.innerHTML = `<div class="stat-row welcome-stats">${rows.join('')}</div>`;
+
+    this.el.welcomeSheet.hidden = false;
+    this.game.audio.upgrade();
+    this.game.fx.confetti?.(this.game.player.x, 1.4, this.game.player.z, 18);
   }
 
   _refreshCarry() {
@@ -253,17 +300,23 @@ export class HUD {
       }
 
       // Il nastro trasportatore è un traguardo, non una tappa: compare solo
-      // quando resa e magazzino sono già al livello massimo.
+      // quando resa e magazzino sono già al livello massimo. Lo presentiamo
+      // come l'assunzione di un "manager" (un ritratto invece della solita
+      // icona), che è concettualmente quello che sta succedendo: da qui in
+      // poi quell'operaio lavora ed è già venduto, senza più supervisione.
       if (g.workers.conveyorReady(typeId)) {
         const owned = g.workers.hasConveyor(typeId);
         const conv = WORKER_TYPES[typeId].conveyor;
         items.push({
-          icon: '🏭',
-          title: conv.label,
-          desc: owned ? `${WORKER_TYPES[typeId].name}: attivo, vende da solo` : conv.desc,
+          icon: conv.manager ?? '🏭',
+          manager: true,
+          title: `Manager: ${WORKER_TYPES[typeId].name}`,
+          desc: owned
+            ? `${conv.label} attivo — vende da solo, senza più bisogno di ritirare`
+            : conv.desc,
           cost: conv.cost, can: !owned && g.stats.coins >= conv.cost,
           maxed: owned,
-          maxedLabel: owned ? '✓' : 'MAX',
+          maxedLabel: owned ? '✓ Assunto' : 'MAX',
           onBuy: () => { g.workers.buyConveyor(typeId, g); this._renderShop(); },
         });
       }
@@ -272,9 +325,10 @@ export class HUD {
     this.el.shopList.innerHTML = items.map((it, i) => {
       if (it.note) return `<div class="shop-note">${it.note}</div>`;
       return `
-        <div class="shop-item">
+        <div class="shop-item ${it.manager ? 'shop-item-manager' : ''}">
           <div class="shop-item-icon">${it.icon}</div>
           <div class="shop-item-body">
+            ${it.manager ? '<span class="manager-tag">MANAGER</span>' : ''}
             <div class="shop-item-title">${it.title}</div>
             <div class="shop-item-desc">${it.desc}</div>
           </div>
