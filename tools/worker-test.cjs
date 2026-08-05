@@ -49,7 +49,11 @@ const shot = (n) => `/tmp/wk-${n}.png`;
     g.player.x = x; g.player.z = z;
     g.grid.update(g.player); g.cam.snapTo(x, z);
   }, [lumberStation.x, lumberStation.z]);
-  await page.waitForTimeout(700);
+  // La carica sale di 1.5/s e serve arrivare a 1.0: teoricamente ~667ms
+  // basterebbero, ma è un margine troppo sottile per un ambiente di test
+  // (un frame lento per il fuoco d'artificio dei tre cantieri appena
+  // finiti, e il dt clampato in Loop.js perde quel poco di tempo).
+  await page.waitForTimeout(1100);
   // si allontana subito per non assumerne un secondo per sbaglio
   await page.evaluate(() => {
     const g = window.game;

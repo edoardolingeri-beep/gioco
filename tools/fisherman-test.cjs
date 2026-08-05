@@ -1,7 +1,10 @@
 /**
  * fisherman-test.cjs — Verifica il pescatore: l'unico operaio "stanziale"
  * (non cerca né cammina, pesca fermo al suo molo vicino al ponte) e la
- * nuova risorsa "pesce" che sblocca.
+ * nuova risorsa "pesce" che sblocca. Il pesce non serve MAI a nessun
+ * cantiere (vedi WorkerSystem.resourceStillNeeded), quindi il pescatore
+ * vende da solo fin dal primo giorno, senza dover comprare il nastro —
+ * il test verifica le monete che arrivano, non uno zaino da ritirare.
  */
 const { chromium } = require('playwright');
 
@@ -35,6 +38,10 @@ const { chromium } = require('playwright');
   });
   console.log('CARTELLO PESCATORE:', JSON.stringify(station), station?.resource === 'fish' ? '✓' : '✗');
 
+  const auto = await page.evaluate(() => window.game.workers.autoSells('fisherman'));
+  console.log('IL PESCE SI VENDE DA SOLO FIN DA SUBITO (nessun cantiere lo richiede mai):',
+    auto ? '✓' : '✗');
+
   // assumi tre pescatori
   const hired = await page.evaluate(async () => {
     const g = window.game;
@@ -60,11 +67,13 @@ const { chromium } = require('playwright');
   const allWorking = posSamples.length === 3 && posSamples.every((w) => w.state === 2);
   console.log('TUTTI GIÀ AL LAVORO SUL MOLO (stato WORK):', allWorking ? '✓' : '✗');
 
-  // il giocatore si allontana: la scorta deve comunque crescere
-  await page.evaluate(() => {
+  // il giocatore si allontana: le monete devono comunque arrivare da sole
+  // (nessuno zaino da riempire: il pesce si vende in automatico)
+  const coinsBefore = await page.evaluate(() => {
     const g = window.game;
     g.player.x = 200; g.player.z = 200;
     g.grid.update(g.player);
+    return g.stats.coins;
   });
   await page.waitForTimeout(18000);
 
@@ -73,11 +82,13 @@ const { chromium } = require('playwright');
     const workers = g.world.dynamic.filter((e) => e.constructor.name === 'WorkerEntity' && e.def.id === 'fisherman');
     return {
       stock: g.workers.stations.fisherman.stock,
+      coins: g.stats.coins,
       positions: workers.map((w) => [+w.x.toFixed(2), +w.z.toFixed(2)]),
     };
   });
   console.log('DOPO 18s SENZA GIOCATORE VICINO:', JSON.stringify(after));
-  console.log('HA ACCUMULATO PESCE:', after.stock > 0 ? '✓' : '✗');
+  console.log('MONETE ARRIVATE DA SOLE (nessun ritiro a mano):',
+    after.coins > coinsBefore ? `✓ (+${after.coins - coinsBefore})` : '✗');
   const stayedPut = after.positions.every((p, i) =>
     Math.abs(p[0] - posSamples[i].x) < 0.05 && Math.abs(p[1] - posSamples[i].z) < 0.05);
   console.log('NON SI È MOSSO DAL MOLO:', stayedPut ? '✓' : '✗');

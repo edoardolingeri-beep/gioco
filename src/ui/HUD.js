@@ -345,8 +345,13 @@ export class HUD {
       // come l'assunzione di un "manager" (un ritratto invece della solita
       // icona), che è concettualmente quello che sta succedendo: da qui in
       // poi quell'operaio lavora ed è già venduto, senza più supervisione.
-      if (g.workers.conveyorReady(typeId)) {
-        const owned = g.workers.hasConveyor(typeId);
+      // Se il villaggio non ha più bisogno di quella risorsa da nessuna
+      // parte, però, si vende già da sola gratis — comprare il nastro non
+      // cambierebbe nulla, quindi non glielo si propone nemmeno (a meno
+      // che non lo avesse già comprato prima che diventasse superflua).
+      const owned = g.workers.hasConveyor(typeId);
+      if (g.workers.conveyorReady(typeId)
+        && (owned || g.workers.resourceStillNeeded(WORKER_TYPES[typeId].resource))) {
         const conv = WORKER_TYPES[typeId].conveyor;
         items.push({
           icon: conv.manager ?? '🏭',
@@ -359,6 +364,20 @@ export class HUD {
           maxed: owned,
           maxedLabel: owned ? '✓ Assunto' : 'MAX',
           onBuy: () => { g.workers.buyConveyor(typeId, g); this._renderShop(); },
+        });
+      }
+
+      // Nessun cantiere aperto ha più bisogno di questa risorsa: si vende
+      // già da sola, gratis — senza dover comprare il nastro. Una riga
+      // informativa, non un acquisto: spiega perché quel cartello non
+      // chiede più di andare a ritirare.
+      if (!owned && g.workers.autoSells(typeId)) {
+        items.push({
+          icon: WORKER_TYPES[typeId].icon,
+          title: `${WORKER_TYPES[typeId].name}: si vende da solo`,
+          desc: 'Nessun cantiere aperto ne ha più bisogno: niente più raccolta a mano, gratis',
+          maxed: true,
+          maxedLabel: '✓ Gratis',
         });
       }
 

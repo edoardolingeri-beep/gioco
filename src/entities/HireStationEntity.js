@@ -16,7 +16,7 @@
 
 import { Entity } from './Entity.js';
 import { RESOURCE_INFO } from '../data/buildings.js';
-import { CFG } from '../data/config.js';
+import { CFG, sellPrice } from '../data/config.js';
 import { drawPanel, drawRing } from '../ui/WorldUI.js';
 import { clamp, damp } from '../core/MathUtils.js';
 
@@ -63,7 +63,7 @@ export class HireStationEntity extends Entity {
     if (inside && !this.playerInside) game.bus.emit('zone:enter', this);
     this.playerInside = inside;
 
-    if (this.workers.hasConveyor(this.def.id)) this._autoSell(dt, game);
+    if (this.workers.autoSells(this.def.id)) this._autoSell(dt, game);
     else if (inside) this._collect(dt, game);
 
     if (this.maxed) { this.charge = 0; return; }
@@ -124,7 +124,7 @@ export class HireStationEntity extends Entity {
 
     this.sellTimer = CFG.deliver.interval;
     this.stock--;
-    const price = Math.round((CFG.economy.prices[this.def.resource] ?? 1) * (game.stats.sellBonus ?? 1));
+    const price = sellPrice(game, this.def.resource);
     game.addCoins(price, this.x, 1.3, this.z);
 
     const near = Math.hypot(game.player.x - this.x, game.player.z - this.z) < 15;
@@ -167,12 +167,16 @@ export class HireStationEntity extends Entity {
     if (this.panelT < 0.02) return;
     const info = RESOURCE_INFO[this.def.resource];
     const hasConveyor = this.workers.hasConveyor(this.def.id);
+    const auto = this.workers.autoSells(this.def.id);
 
-    if (hasConveyor) {
+    if (auto) {
       // Niente più "vieni a ritirare": si vende da sé. Un solo promemoria
-      // discreto, così si capisce perché il magazzino qui non si riempie mai.
+      // discreto, così si capisce perché il magazzino qui non si riempie mai
+      // — e, se non è per il nastro, perché il paese l'abbia deciso da solo.
       drawPanel(ctx, cam, dpr, this.x, 2.55, this.z, {
-        title: '🏭 Nastro trasportatore — vende da solo',
+        title: hasConveyor
+          ? '🏭 Nastro trasportatore — vende da solo'
+          : `${info.icon} Non serve più al villaggio — si vende da solo`,
         appear: this.panelT,
         width: 230,
         titleColor: '#9ef7c0',

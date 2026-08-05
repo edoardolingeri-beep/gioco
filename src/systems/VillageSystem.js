@@ -117,7 +117,7 @@ const STAGES = [
     name: 'Paese',
     npcs: 4,
     cobbleRoads: true,
-    haulers: 2,
+    haulers: 1,
     props: () => [
       { sprite: 'lamp', x: 3.6, z: 2.2, shadow: 0.28, solid: true, radius: 0.25 },
       { sprite: 'lamp', x: -3.8, z: -1.2, shadow: 0.28, solid: true, radius: 0.25 },
@@ -132,7 +132,7 @@ const STAGES = [
   {
     name: 'Paese fiorente',
     npcs: 5,
-    haulers: 2,
+    haulers: 1,
     props: () => [
       { sprite: 'lamp', x: 6.4, z: 4.2, shadow: 0.28, solid: true, radius: 0.25 },
       { sprite: 'lamp', x: -6.6, z: 1.6, shadow: 0.28, solid: true, radius: 0.25 },
@@ -153,7 +153,7 @@ const STAGES = [
   {
     name: 'Città',
     npcs: 5,
-    haulers: 2,
+    haulers: 1,
     removeFence: true,
     asphaltRoads: true,
     props: () => [
@@ -169,7 +169,7 @@ const STAGES = [
   {
     name: 'Città vivace',
     npcs: 6,
-    haulers: 2,
+    haulers: 1,
     props: () => [
       { sprite: 'cityLamp', x: -9.4, z: 2.2, shadow: 0.3, solid: true, radius: 0.28 },
       { sprite: 'cityLamp', x: -9.4, z: -1.6, shadow: 0.3, solid: true, radius: 0.28 },
@@ -195,7 +195,7 @@ const STAGES = [
   {
     name: 'Città ricca',
     npcs: 6,
-    haulers: 2,
+    haulers: 1,
     props: () => [
       { sprite: 'cityLamp', x: -5.2, z: 12.4, shadow: 0.3, solid: true, radius: 0.28 },
       { sprite: 'cityBench', x: -10.8, z: 12.6, shadow: 0.55, solid: true, radius: 0.55,
@@ -209,7 +209,7 @@ const STAGES = [
   {
     name: 'Grande città',
     npcs: 7,
-    haulers: 3,
+    haulers: 1,
     props: () => [
       { sprite: 'cityLamp', x: 7.0, z: 12.6, shadow: 0.3, solid: true, radius: 0.28 },
       { sprite: 'cityLamp', x: 13.0, z: 13.0, shadow: 0.3, solid: true, radius: 0.28 },
@@ -253,7 +253,7 @@ const STAGES = [
   {
     name: 'Skyline',
     npcs: 7,
-    haulers: 2,
+    haulers: 1,
     props: () => [
       { sprite: 'cityLamp', x: 5.0, z: -10.2, shadow: 0.3, solid: true, radius: 0.28 },
       { sprite: 'kiosk', x: 5.4, z: -8.2, shadow: 0.8, solid: true, radius: 0.85,
@@ -268,7 +268,7 @@ const STAGES = [
   {
     name: 'Metropoli industriale',
     npcs: 7,
-    haulers: 3,
+    haulers: 1,
     props: () => [
       { sprite: 'cityLamp', x: -13.0, z: -8.0, shadow: 0.3, solid: true, radius: 0.28 },
       { sprite: 'bin', x: -13.8, z: -6.4, shadow: 0.28, solid: true, radius: 0.28 },
@@ -280,7 +280,7 @@ const STAGES = [
   {
     name: 'Capitale',
     npcs: 8,
-    haulers: 2,
+    haulers: 1,
     props: () => [
       { sprite: 'cityLamp', x: 16.6, z: 12.4, shadow: 0.3, solid: true, radius: 0.28 },
       { sprite: 'cityLamp', x: 22.4, z: 12.6, shadow: 0.3, solid: true, radius: 0.28 },

@@ -231,7 +231,8 @@ Object.assign(BUILDINGS, {
     radius: 2.2,
     zone: 3.6,
     spot: { x: 0, z: 14.2 },
-    perk: 'La città prende forma',
+    perk: 'La città prende forma, +rendita dalle tasse comunali',
+    effect: (s) => { s.income += 4; },
   },
 
   shops: {
@@ -258,7 +259,8 @@ Object.assign(BUILDINGS, {
     radius: 1.9,
     zone: 3.4,
     spot: { x: 13.6, z: 8.6 },
-    perk: 'La città respira',
+    perk: 'La città respira, +spazio nei magazzini',
+    effect: (s) => { s.warehouseBonus += 5; },
     /** I getti d'acqua scorrono: sono cotti in pochi fotogrammi. */
     overlay: (r, game, self) => {
       const jets = game.assets.fountainJets;
@@ -282,8 +284,8 @@ Object.assign(BUILDINGS, {
     radius: 2.0,
     zone: 3.4,
     spot: { x: -8.2, z: 14.8 },
-    perk: 'Rendita in monete, +1 oro per filone',
-    effect: (s) => { s.income += 8; s.goldBonus += 1; },
+    perk: 'Rendita in monete, +1 oro per filone, l\'oro si vende meglio',
+    effect: (s) => { s.income += 8; s.goldBonus += 1; s.goldSellBonus += 0.5; },
     onComplete: (game) => game.workers.registerStation('goldminer', game.world.buildings.bank),
     onRestore: (game) => game.workers.registerStation('goldminer', game.world.buildings.bank),
   },
@@ -347,7 +349,8 @@ Object.assign(BUILDINGS, {
     radius: 1.8,
     zone: 3.2,
     spot: { x: 2.6, z: -12.6 },
-    perk: 'Il simbolo della metropoli',
+    perk: 'Il simbolo della metropoli attira affari',
+    effect: (s) => { s.sellBonus += 0.3; },
   },
 
   factory: {

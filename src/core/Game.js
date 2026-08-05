@@ -83,6 +83,9 @@ export class Game {
       // bonus concessi dagli edifici
       logBonus: 0, stoneBonus: 0, ironBonus: 0, goldBonus: 0, warehouseBonus: 0,
       sellBonus: 1, income: 0, regenMul: 1,
+      // bonus di vendita specifico per l'oro (la banca): si somma a sellBonus
+      // solo quando si vende oro, non tocca il prezzo delle altre risorse.
+      goldSellBonus: 0,
       // contatori
       treesChopped: 0, rocksMined: 0, ironMined: 0, goldMined: 0,
       wolvesKilled: 0, bearsKilled: 0, upgradeIndex: 0,
@@ -479,6 +482,7 @@ export class Game {
         ironBonus: this.stats.ironBonus,
         goldBonus: this.stats.goldBonus,
         sellBonus: this.stats.sellBonus,
+        goldSellBonus: this.stats.goldSellBonus,
         income: this.stats.income,
         regenMul: this.stats.regenMul,
         warehouseBonus: this.stats.warehouseBonus,
@@ -529,6 +533,17 @@ export class Game {
     const resources = {};
     let coins = 0;
 
+    // Stessa domanda di `WorkerSystem.resourceStillNeeded`, ma sui dati
+    // salvati (non c'è ancora un `World` vivo a questo punto di `load()`):
+    // quali risorse servono ancora a un cantiere già sbloccato e non finito.
+    const savedBuildings = data.buildings ?? {};
+    const stillNeeded = {};
+    for (const id in BUILDINGS) {
+      const b = savedBuildings[id];
+      if (!b || !b.available || b.state === BUILD_STATE.DONE) continue;
+      for (const res in BUILDINGS[id].cost) stillNeeded[res] = true;
+    }
+
     for (const typeId in WORKER_TYPES) {
       const count = counts[typeId] ?? 0;
       if (count <= 0) continue;
@@ -544,9 +559,14 @@ export class Game {
       const cycleTime = def.workTime * (def.stationary ? 1 : CFG.offline.cycleFactor);
       const produced = (sec / cycleTime) * yieldAmt * count;
 
-      if (conveyors[typeId]) {
+      // Vende da solo anche ad app chiusa: per il nastro comprato, o perché
+      // nessun cantiere aperto ha più bisogno di quella risorsa (villaggio
+      // autosufficiente — vedi WorkerSystem.autoSells, stessa idea qui).
+      if (conveyors[typeId] || !stillNeeded[def.resource]) {
         const price = CFG.economy.prices[def.resource] ?? 1;
-        coins += produced * price * (data.sellBonus ?? 1);
+        let mul = data.sellBonus ?? 1;
+        if (def.resource === 'gold') mul += data.goldSellBonus ?? 0;
+        coins += produced * price * mul;
       } else {
         const before = stock[typeId] ?? 0;
         const after = Math.min(cap, before + produced);
@@ -594,6 +614,7 @@ export class Game {
     s.ironBonus = data.ironBonus ?? 0;
     s.goldBonus = data.goldBonus ?? 0;
     s.sellBonus = data.sellBonus ?? 1;
+    s.goldSellBonus = data.goldSellBonus ?? 0;
     s.income = data.income ?? 0;
     s.regenMul = data.regenMul ?? 1;
     s.warehouseBonus = data.warehouseBonus ?? 0;

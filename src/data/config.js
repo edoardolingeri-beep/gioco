@@ -162,10 +162,11 @@ export const CFG = {
   /* -------------------------------------------------------------- abitanti */
   npc: {
     speed: 1.85,
-    // Era 54: con tutti a girovagare fra un punto di interesse e l'altro,
-    // le strade sembravano più affollate del dovuto. Meno abitanti, e chi
-    // c'è si ferma più a lungo (vedi NPCEntity._pickActivity).
-    maxCount: 40,
+    // Era 54, poi 40: anche così restava un casino, soprattutto sommato ai
+    // carrettieri (vedi VillageSystem, campo `haulers` di ogni fase, anche
+    // quello dimezzato per lo stesso motivo). Meno abitanti, e chi c'è si
+    // ferma più a lungo (vedi NPCEntity._pickActivity).
+    maxCount: 28,
   },
 
   /* ------------------------------------------------------------- traffico */
@@ -283,6 +284,18 @@ export function idealPPU(cssWidth, dpr) {
   const r = CFG.render;
   const css = Math.min(Math.max(cssWidth / r.targetViewWidth, r.minPPU), r.maxPPU);
   return css * dpr;
+}
+
+/**
+ * Prezzo di vendita di una risorsa, in monete. `sellBonus` vale per tutto
+ * (mulino, botteghe, aeroporto...); `goldSellBonus` (la banca) si somma
+ * solo quando il tipo è 'gold' — un edificio, un bonus specifico, invece
+ * di far crescere lo stesso moltiplicatore generico all'infinito.
+ */
+export function sellPrice(game, type) {
+  const base = CFG.economy.prices[type] ?? 1;
+  const mul = (game.stats.sellBonus ?? 1) + (type === 'gold' ? (game.stats.goldSellBonus ?? 0) : 0);
+  return Math.round(base * mul);
 }
 
 /**

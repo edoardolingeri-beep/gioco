@@ -580,7 +580,63 @@ senza un motivo visibile per cui il prezzo è cambiato, non si capiva.
 Nessun evento scatta se negozio o opzioni sono già aperti: il timer si
 limita a riprovare tra poco, invece di sovrapporsi a un altro pannello.
 
-### Un recinto quadrato, non un cerchio
+### Il villaggio autosufficiente: si vende da solo quel che non serve più
+
+Il nastro trasportatore (sopra) richiede un traguardo lungo — resa e
+magazzino al livello massimo, poi una spesa importante. Ma c'è un caso più
+semplice e più comune: una risorsa che il giocatore ha smesso di portare a
+mano non perché ha comprato qualcosa, ma perché **non gli serve più** —
+tutti i cantieri che la richiedevano sono già finiti. `WorkerSystem.
+resourceStillNeeded(resource)` guarda i cantieri già sbloccati (`available`)
+e non ancora finiti in `BUILD_ORDER`: se nessuno di questi costa più quella
+risorsa, il cartello inizia a venderla da solo — stesso meccanismo del
+nastro (`HireStationEntity._autoSell`), ma gratis, e senza aspettare che il
+giocatore compri niente.
+
+Guarda solo i cantieri *già visibili*, non l'intero albero futuro: se più
+avanti un edificio tornerà ad averne bisogno (il legno, per esempio, serve
+di nuovo per la stazione in Fase 5, dopo un tratto senza), la funzione
+torna vera da sola non appena quel cantiere si sblocca, e il cartello
+smette di vendere per lasciare che la scorta si riaccumuli in tempo —
+nessuna cache permanente, si ricalcola (con una cache invalidata a ogni
+`building:done`, per non rifare il giro di 19 edifici a ogni frame) ogni
+volta che qualcosa di rilevante cambia.
+
+Il pesce è un caso particolare, non uno speciale: nessun cantiere lo
+richiede mai, quindi `resourceStillNeeded('fish')` è falso fin dal primo
+giorno — il pescatore vende da solo da subito, coerente con l'essere
+l'unico operaio pensato come reddito passivo puro (vedi sopra). Il "nuovo
+pozzo" resta comunque legato al livello massimo di resa/magazzino
+(`conveyorReady`), per tutti e cinque gli operai allo stesso modo: cambia
+solo se serve *anche* comprare il nastro per sbloccarlo, o se la scorta si
+vende già da sola.
+
+### Un bonus per ogni edificio
+
+Alcuni edifici (municipio, parco, la seconda torre) alzavano solo il
+livello del villaggio senza dare nessun numero in cambio — costruirli si
+sentiva come un passo avanti nella storia, non nel gioco. Ora ognuno ha un
+effetto vero: il municipio rende una piccola rendita (le tasse comunali),
+il parco allarga i magazzini, la torre panoramica alza il moltiplicatore
+di vendita generale.
+
+La banca aveva già un effetto (rendita + oro estratto in più), ma era
+facile non accorgersene: ora dà anche un bonus di vendita specifico
+sull'oro (`stats.goldSellBonus`, si somma a `sellBonus` solo quando si
+vende oro — `sellPrice()` in `data/config.js`), così un edificio pensato
+per l'oro rende visibilmente di più proprio sull'oro, non solo un +8 di
+rendita generica facile da perdere nel resto dei numeri.
+
+### Meno gente, meno carretti
+
+Il tetto di abitanti (`CFG.npc.maxCount`) era già stato abbassato una volta
+questa sessione (54 → 40); non bastava. Ora è 28, e soprattutto i
+carrettieri — che si sommano ai normali abitanti fase dopo fase, senza mai
+diminuire — sono stati dimezzati per ogni fase (`haulers` in `VillageSystem`
+STAGES): a fine partita erano un terzo della popolazione, tutti carretti
+per strada, ed erano quello che si notava di più nel "casino". La
+probabilità che un abitante scelga di sedersi invece di girovagare è salita
+dal 55% al 68%: più gente ferma, meno gente per strada nello stesso istante.
 
 La prima versione era un anello di 44 tratti, ognuno orientato con la sprite
 cotta più vicina fra le 12 disponibili (`FENCE_DIRS`): con un angolo ogni
@@ -751,6 +807,14 @@ Le cinque fasi previste sono completate. Gli sviluppi naturali da qui:
 - **Meteo**: pioggia e neve, con lo stesso schema a veli usato dalla notte.
 - **Selettore x1/x10/xMax** nel negozio, per comprare più livelli di
   potenziamento in un colpo solo invece di premere dieci volte.
+- **Città a griglia**: oggi ogni edificio ha una posizione fissata a mano
+  (`spot` in `data/buildings.js`) e le strade sono raggi che partono dal
+  centro verso ciascuno (`VillageSystem._paveRoads`/`_paveAsphalt`) — non
+  un reticolo. Rifarlo bene (strade dritte, edifici allineati) tocca le
+  posizioni di tutti e 19 gli edifici, il disegno delle strade in ogni
+  fase, l'anello del traffico (Fase 5) e ogni punto d'interesse degli
+  abitanti agganciato a un edificio: un lavoro a parte, non una modifica
+  al margine.
 
 Il motore dell'evoluzione è già in funzione: `VillageSystem` tiene un livello
 che sale a ogni costruzione completata, e ogni livello elenca in `STAGES` gli

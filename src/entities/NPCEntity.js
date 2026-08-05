@@ -113,7 +113,7 @@ export class NPCEntity extends Entity {
     if (!poi.length) { this._idle(0); this.actTimer = 2; return; }
 
     let spot = null;
-    if (fxRand.chance(0.55)) {
+    if (fxRand.chance(0.68)) {
       const freeSit = poi.filter((p) => p.kind === 'sit' && !p.occupiedBy);
       if (freeSit.length) spot = freeSit[(Math.random() * freeSit.length) | 0];
     }
