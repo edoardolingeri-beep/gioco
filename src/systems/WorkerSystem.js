@@ -154,9 +154,10 @@ export class WorkerSystem {
   /* ---------------------------------------------------- villaggio autosufficiente */
 
   /**
-   * True se il cartello vende da solo la scorta — per il nastro
-   * trasportatore comprato, o perché il magazzino è pieno: senza il
-   * nastro, il cartello NON vende finché c'è ancora posto, così la
+   * True se il cartello vende da solo la scorta — per una risorsa che
+   * nessuna costruzione richiede mai (`alwaysSells`, es. il pesce), per il
+   * nastro trasportatore comprato, o perché il magazzino è pieno: senza
+   * questi due casi, il cartello NON vende finché c'è ancora posto, così la
    * risorsa resta lì disponibile per le costruzioni; vende solo
    * l'eccedenza che altrimenti l'operaio dovrebbe buttare via aspettando
    * con il carico in spalla. Appena il giocatore passa a ritirare (o il
@@ -164,6 +165,7 @@ export class WorkerSystem {
    * accumulare normalmente.
    */
   autoSells(typeId) {
+    if (WORKER_TYPES[typeId].alwaysSells) return true;
     if (this.hasConveyor(typeId)) return true;
     const st = this.stations[typeId];
     return !!st && st.stockFull;

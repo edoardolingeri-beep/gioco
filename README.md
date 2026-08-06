@@ -602,10 +602,15 @@ non è più pieno e il cartello torna semplicemente ad accumulare, senza
 vendere nulla.
 
 Non serve nessuna logica su cosa "serve ancora": lo stesso meccanismo vale
-per tutti e cinque gli operai, pesce compreso — anche il pescatore accumula
-normalmente e vende solo l'eccedenza una volta pieno il cesto, non fin dal
-primo pesce. Il nastro trasportatore resta l'unico modo per vendere
-*sempre*, non solo l'eccedenza: è quello il vero traguardo pagato.
+per legno, pietra, ferro e oro — tutti richiesti da qualche costruzione,
+quindi tutti accumulano normalmente e vendono solo l'eccedenza una volta
+pieno il magazzino. Il pesce fa eccezione di proposito: nessun cantiere lo
+richiede mai come costo, quindi non c'è nulla da "tenere da parte" per lui
+— il pescatore lo vende sempre da solo, fin dal primo pescato
+(`WORKER_TYPES.fisherman.alwaysSells`, letto da `WorkerSystem.autoSells`
+insieme al nastro trasportatore e al magazzino pieno). Il nastro resta
+comunque comprabile anche per il pescatore: non cambia se vende (già lo
+fa), ma resta il traguardo che sblocca la nuova insenatura (`pit2`).
 
 ### Un bonus per ogni edificio
 

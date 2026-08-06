@@ -177,6 +177,16 @@ export class HireStationEntity extends Entity {
         width: 230,
         titleColor: '#9ef7c0',
       });
+    } else if (this.def.alwaysSells) {
+      // Il pesce non serve a nessuna costruzione: si vende sempre da solo,
+      // fin dal primo pescato — nessun motivo di aspettare che il
+      // magazzino si riempia.
+      drawPanel(ctx, cam, dpr, this.x, 2.55, this.z, {
+        title: `${info.icon} Si vende sempre da solo — non serve alle costruzioni`,
+        appear: this.panelT,
+        width: 250,
+        titleColor: '#9ef7c0',
+      });
     } else if (this.stockFull) {
       // Pieno e senza nastro: l'operaio non butta via il carico né resta
       // fermo ad aspettare — l'eccedenza si vende da sola, il resto aspetta

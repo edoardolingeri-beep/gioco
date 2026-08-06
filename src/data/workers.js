@@ -29,6 +29,11 @@
  * relativo al cartello) e pesca lì — vedi `WorkerEntity._workStationary`.
  * Serve a introdurre una risorsa legata al fiume senza dover disegnare
  * (e cuocere) una sprite apposta per ogni "punto pesca".
+ *
+ * `alwaysSells: true` (solo il pesce, per ora) descrive una risorsa che
+ * nessun cantiere richiede mai come costo: non c'è nulla da "tenere da
+ * parte" per una costruzione, quindi tanto vale venderla subito invece di
+ * aspettare che il magazzino si riempia — vedi `WorkerSystem.autoSells`.
  */
 
 export const WORKER_TYPES = {
@@ -186,6 +191,9 @@ export const WORKER_TYPES = {
     // più vicino all'acqua rispetto al cartello (vedi la nota in cima al
     // file su `stationary`).
     stationary: true,
+    // Il pesce non serve a nessuna costruzione: niente da tenere da parte,
+    // si vende sempre da solo fin dal primo pesce pescato.
+    alwaysSells: true,
     dockOffX: 0, dockOffZ: 1.3,
     // Sponda SUD, vicino al ponte ma senza bisogno che sia già stato
     // costruito il ponte per raggiungerlo: il fiume qui è già di casa.

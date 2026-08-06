@@ -552,8 +552,9 @@ export class Game {
       let mul = data.sellBonus ?? 1;
       if (def.resource === 'gold') mul += data.goldSellBonus ?? 0;
 
-      if (conveyors[typeId]) {
-        // Il nastro vende tutto, sempre: niente resta nel magazzino.
+      if (conveyors[typeId] || def.alwaysSells) {
+        // Il nastro vende tutto, sempre — o la risorsa non serve mai a
+        // nessuna costruzione (il pesce): niente resta nel magazzino.
         coins += produced * price * mul;
       } else {
         // Senza nastro, esattamente come da svegli (WorkerSystem.autoSells):
