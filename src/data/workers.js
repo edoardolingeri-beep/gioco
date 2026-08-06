@@ -39,7 +39,7 @@ export const WORKER_TYPES = {
     resource: 'wood',
     icon: '🪓',
     hireCost: 100,
-    costGrowth: 2.6,     // ogni operaio in più costa questo multiplo in più
+    costGrowth: 3.2,     // ogni operaio in più costa questo multiplo in più
     maxWorkers: 3,
     // Il cartello punta verso il centro del villaggio (vedi offX/offZ),
     // non più verso il bosco: è più vicino agli alberi veri e propri di
@@ -56,20 +56,20 @@ export const WORKER_TYPES = {
     upgrades: {
       yield: {
         label: 'Resa del boscaiolo', desc: 'Più tronchi per ogni consegna',
-        base: 1, step: 1, cost: 130, growth: 1.42, maxLevel: 10,
+        base: 1, step: 1, cost: 130, growth: 1.58, maxLevel: 10,
       },
       capacity: {
         label: 'Magazzino del boscaiolo', desc: 'Il cartello accumula di più prima di riempirsi',
-        base: 20, step: 15, cost: 100, growth: 1.36, maxLevel: 10,
+        base: 20, step: 15, cost: 100, growth: 1.5, maxLevel: 10,
       },
     },
     conveyor: {
       label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
-      cost: 6000, manager: '🧔',
+      cost: 10000, manager: '🧔',
     },
     pit2: {
       label: 'Nuovo bosco', desc: 'Un secondo filare di alberi da abbattere: raddoppia la resa di ogni consegna',
-      cost: 20000, yieldMul: 2, icon: '🌲',
+      cost: 34000, yieldMul: 2, icon: '🌲',
     },
   },
   miner: {
@@ -79,7 +79,7 @@ export const WORKER_TYPES = {
     resource: 'stone',
     icon: '⛏️',
     hireCost: 140,
-    costGrowth: 2.6,
+    costGrowth: 3.2,
     maxWorkers: 3,
     workRadius: 17,   // idem al boscaiolo: compensa lo spostamento verso il centro
     workTime: 3.8,
@@ -88,20 +88,20 @@ export const WORKER_TYPES = {
     upgrades: {
       yield: {
         label: 'Resa del minatore', desc: 'Più pietra per ogni consegna',
-        base: 1, step: 1, cost: 170, growth: 1.42, maxLevel: 10,
+        base: 1, step: 1, cost: 170, growth: 1.58, maxLevel: 10,
       },
       capacity: {
         label: 'Magazzino del minatore', desc: 'Il cartello accumula di più prima di riempirsi',
-        base: 20, step: 15, cost: 130, growth: 1.36, maxLevel: 10,
+        base: 20, step: 15, cost: 130, growth: 1.5, maxLevel: 10,
       },
     },
     conveyor: {
       label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
-      cost: 7500, manager: '⛑️',
+      cost: 13000, manager: '⛑️',
     },
     pit2: {
       label: 'Nuova cava', desc: 'Un secondo fronte di roccia: raddoppia la resa di ogni consegna',
-      cost: 26000, yieldMul: 2, icon: '⛰️',
+      cost: 44000, yieldMul: 2, icon: '⛰️',
     },
   },
   ironminer: {
@@ -111,7 +111,7 @@ export const WORKER_TYPES = {
     resource: 'iron',
     icon: '🔩',
     hireCost: 260,
-    costGrowth: 2.6,
+    costGrowth: 3.2,
     maxWorkers: 3,
     workRadius: 16,
     workTime: 4.2,
@@ -123,20 +123,20 @@ export const WORKER_TYPES = {
     upgrades: {
       yield: {
         label: 'Resa del minatore di ferro', desc: 'Più ferro per ogni consegna',
-        base: 1, step: 1, cost: 260, growth: 1.42, maxLevel: 10,
+        base: 1, step: 1, cost: 260, growth: 1.58, maxLevel: 10,
       },
       capacity: {
         label: 'Magazzino del minatore di ferro', desc: 'Il cartello accumula di più prima di riempirsi',
-        base: 20, step: 15, cost: 200, growth: 1.36, maxLevel: 10,
+        base: 20, step: 15, cost: 200, growth: 1.5, maxLevel: 10,
       },
     },
     conveyor: {
       label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
-      cost: 11000, manager: '🦾',
+      cost: 19000, manager: '🦾',
     },
     pit2: {
       label: 'Nuova vena', desc: 'Una seconda vena di ferro: raddoppia la resa di ogni consegna',
-      cost: 38000, yieldMul: 2, icon: '🗻',
+      cost: 64000, yieldMul: 2, icon: '🗻',
     },
   },
   goldminer: {
@@ -146,7 +146,7 @@ export const WORKER_TYPES = {
     resource: 'gold',
     icon: '🥇',
     hireCost: 420,
-    costGrowth: 2.6,
+    costGrowth: 3.2,
     maxWorkers: 3,
     workRadius: 20,
     workTime: 4.8,
@@ -156,20 +156,20 @@ export const WORKER_TYPES = {
     upgrades: {
       yield: {
         label: 'Resa del cercatore d\'oro', desc: 'Più oro per ogni consegna',
-        base: 1, step: 1, cost: 380, growth: 1.42, maxLevel: 10,
+        base: 1, step: 1, cost: 380, growth: 1.58, maxLevel: 10,
       },
       capacity: {
         label: 'Magazzino del cercatore d\'oro', desc: 'Il cartello accumula di più prima di riempirsi',
-        base: 20, step: 15, cost: 300, growth: 1.36, maxLevel: 10,
+        base: 20, step: 15, cost: 300, growth: 1.5, maxLevel: 10,
       },
     },
     conveyor: {
       label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
-      cost: 16000, manager: '🕴️',
+      cost: 27000, manager: '🕴️',
     },
     pit2: {
       label: 'Nuovo filone', desc: 'Un secondo filone aurifero: raddoppia la resa di ogni consegna',
-      cost: 55000, yieldMul: 2, icon: '💎',
+      cost: 92000, yieldMul: 2, icon: '💎',
     },
   },
   fisherman: {
@@ -179,7 +179,7 @@ export const WORKER_TYPES = {
     resource: 'fish',
     icon: '🎣',
     hireCost: 320,
-    costGrowth: 2.6,
+    costGrowth: 3.2,
     maxWorkers: 3,
     workTime: 5.2,
     // Non cerca né trasporta nulla: pesca da fermo al suo molo, un passo
@@ -193,20 +193,20 @@ export const WORKER_TYPES = {
     upgrades: {
       yield: {
         label: 'Resa del pescatore', desc: 'Più pesce per ogni battuta',
-        base: 1, step: 1, cost: 220, growth: 1.42, maxLevel: 10,
+        base: 1, step: 1, cost: 220, growth: 1.58, maxLevel: 10,
       },
       capacity: {
         label: 'Cesta del pescatore', desc: 'Il cartello accumula di più prima di riempirsi',
-        base: 20, step: 15, cost: 170, growth: 1.36, maxLevel: 10,
+        base: 20, step: 15, cost: 170, growth: 1.5, maxLevel: 10,
       },
     },
     conveyor: {
       label: 'Nastro trasportatore', desc: 'Vende da solo, senza più bisogno di ritirare',
-      cost: 9000, manager: '🧢',
+      cost: 15000, manager: '🧢',
     },
     pit2: {
       label: 'Nuova insenatura', desc: 'Un secondo tratto di fiume pescoso: raddoppia la resa di ogni battuta',
-      cost: 32000, yieldMul: 2, icon: '🌊',
+      cost: 54000, yieldMul: 2, icon: '🌊',
     },
   },
 };

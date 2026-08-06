@@ -154,8 +154,8 @@ export const CFG = {
     // Allargare il recinto (VillageSystem.expand): quanto cresce il
     // semilato a ogni acquisto, e quanto costa (cresce a sua volta).
     expansionStep: 3,
-    expansionBaseCost: 2500,
-    expansionGrowth: 1.8,
+    expansionBaseCost: 4000,
+    expansionGrowth: 2.2,
     expansionMax: 3,      // oltre questo, il recinto non si allarga più
   },
 
@@ -311,77 +311,77 @@ export const UPGRADES = [
   },
   {
     id: 'pick1', label: 'Piccone', desc: 'Ora puoi rompere la pietra',
-    cost: 55, icon: '⛏️',
+    cost: 65, icon: '⛏️',
     apply: (s) => { s.pickLevel = 1; s.hasPick = true; },
   },
   {
     id: 'bag1', label: 'Zaino Robusto', desc: '+8 di capienza',
-    cost: 85, icon: '🎒',
+    cost: 110, icon: '🎒',
     apply: (s) => { s.bagLevel = 2; },
   },
   {
     id: 'boots1', label: 'Stivali Leggeri', desc: 'Ti muovi più veloce',
-    cost: 120, icon: '👢',
+    cost: 175, icon: '👢',
     apply: (s) => { s.bootsLevel = 2; },
   },
   {
     id: 'armor1', label: 'Giubba di Cuoio', desc: 'Più salute contro i lupi',
-    cost: 160, icon: '🛡️',
+    cost: 270, icon: '🛡️',
     apply: (s) => { s.armorLevel = 2; },
   },
   {
     id: 'axe3', label: 'Ascia d\'Acciaio', desc: 'Alberi in due colpi, e fa più male',
-    cost: 210, icon: '⚒️',
+    cost: 420, icon: '⚒️',
     apply: (s) => { s.axeLevel = 3; },
   },
   {
     id: 'pick2', label: 'Piccone d\'Acciaio', desc: 'La pietra si sbriciola',
-    cost: 260, icon: '🔨',
+    cost: 650, icon: '🔨',
     apply: (s) => { s.pickLevel = 2; },
   },
   {
     id: 'bag2', label: 'Zaino da Carico', desc: '+10 di capienza',
-    cost: 340, icon: '🧳',
+    cost: 1000, icon: '🧳',
     apply: (s) => { s.bagLevel = 3; },
   },
   {
     id: 'boots2', label: 'Stivali da Corsa', desc: 'Attraversi il paese in un lampo',
-    cost: 420, icon: '🥾',
+    cost: 1550, icon: '🥾',
     apply: (s) => { s.bootsLevel = 3; },
   },
   {
     id: 'armor2', label: 'Cotta di Maglia', desc: 'I lupi non ti spaventano più',
-    cost: 560, icon: '⛓️',
+    cost: 2400, icon: '⛓️',
     apply: (s) => { s.armorLevel = 3; },
   },
   {
     id: 'bag3', label: 'Carriola', desc: '+12 di capienza',
-    cost: 720, icon: '🛒',
+    cost: 3700, icon: '🛒',
     apply: (s) => { s.bagLevel = 4; },
   },
   {
     id: 'pick3', label: 'Piccone da Minatore', desc: 'Estrai anche l\'oro',
-    cost: 900, icon: '⚱️',
+    cost: 5700, icon: '⚱️',
     apply: (s) => { s.pickLevel = 3; },
   },
   {
     id: 'axe4', label: 'Ascia del Capomastro', desc: 'Un albero, un colpo',
-    cost: 1200, icon: '🪚',
+    cost: 8800, icon: '🪚',
     apply: (s) => { s.axeLevel = 4; },
   },
   {
     id: 'bag4', label: 'Furgone a Mano', desc: '+16 di capienza',
-    cost: 1600, icon: '🚚',
+    cost: 13500, icon: '🚚',
     apply: (s) => { s.bagLevel = 5; },
   },
   {
     id: 'boots3', label: 'Scarpe da Città', desc: 'Corri come un tram',
-    cost: 2200, icon: '👟',
+    cost: 21000, icon: '👟',
     apply: (s) => { s.bootsLevel = 4; },
   },
   {
     id: 'armor3', label: 'Giubbotto Tecnico', desc: 'Praticamente invincibile',
-    cost: 3000, icon: '🦺',
+    cost: 32000, icon: '🦺',
     apply: (s) => { s.armorLevel = 4; },
   },
 ];

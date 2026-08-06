@@ -634,6 +634,32 @@ per strada, ed erano quello che si notava di più nel "casino". La
 probabilità che un abitante scelga di sedersi invece di girovagare è salita
 dal 55% al 68%: più gente ferma, meno gente per strada nello stesso istante.
 
+### Costi più ripidi: portare tutto al massimo deve costare caro
+
+Con l'economia che gira sempre più in fretta (rendita della banca, vendita
+automatica dell'eccedenza, più operai contemporaneamente), i costi fissi
+restavano indietro: si arrivava a comprare tutto — livelli, nastri, pozzi,
+equipaggiamento — senza che il portafoglio se ne accorgesse. Sistemato su
+più fronti, tutti dello stesso tipo (crescita esponenziale più ripida, non
+nuovi sistemi):
+
+- **Livelli di resa/magazzino** degli operai: la crescita per livello passa
+  da 1.42×/1.36× a 1.58×/1.5×. Il primo livello costa uguale (non cambia
+  l'inizio partita), ma portarli tutti e dieci al massimo costa molto di
+  più — il moltiplicatore si accumula livello dopo livello.
+- **Nastro trasportatore e "nuovo pozzo"**: costi quasi raddoppiati per
+  tutti e cinque gli operai (dai 6.000-16.000 di prima ai 10.000-27.000 per
+  il nastro, dai 20.000-55.000 ai 34.000-92.000 per il pozzo).
+- **Assumere un secondo/terzo operaio** dello stesso tipo: la crescita per
+  assunzione sale da 2.6× a 3.2×.
+- **Allargare il villaggio**: costo base 2.500→4.000, crescita 1.8×→2.2×.
+- **Equipaggiamento del personaggio** (`UPGRADES`, il banco dell'artigiano):
+  il primo potenziamento (l'ascia di ferro) costa uguale, ma l'ultimo della
+  lista passa da 3.000 a 32.000 — una progressione molto più ripida verso
+  la fine, che segue tutta la partita invece di esaurirsi a metà.
+
+### Un recinto quadrato, non un cerchio
+
 La prima versione era un anello di 44 tratti, ognuno orientato con la sprite
 cotta più vicina fra le 12 disponibili (`FENCE_DIRS`): con un angolo ogni
 30°, l'errore di arrotondamento si vedeva — il recinto sembrava storto e
