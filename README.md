@@ -580,36 +580,32 @@ senza un motivo visibile per cui il prezzo è cambiato, non si capiva.
 Nessun evento scatta se negozio o opzioni sono già aperti: il timer si
 limita a riprovare tra poco, invece di sovrapporsi a un altro pannello.
 
-### Il villaggio autosufficiente: si vende da solo quel che non serve più
+### Il villaggio autosufficiente: vende solo l'eccedenza, mai la scorta utile
 
-Il nastro trasportatore (sopra) richiede un traguardo lungo — resa e
-magazzino al livello massimo, poi una spesa importante. Ma c'è un caso più
-semplice e più comune: una risorsa che il giocatore ha smesso di portare a
-mano non perché ha comprato qualcosa, ma perché **non gli serve più** —
-tutti i cantieri che la richiedevano sono già finiti. `WorkerSystem.
-resourceStillNeeded(resource)` guarda i cantieri già sbloccati (`available`)
-e non ancora finiti in `BUILD_ORDER`: se nessuno di questi costa più quella
-risorsa, il cartello inizia a venderla da solo — stesso meccanismo del
-nastro (`HireStationEntity._autoSell`), ma gratis, e senza aspettare che il
-giocatore compri niente.
+Prima idea (poi corretta): un cartello vendeva da solo una risorsa non più
+richiesta da nessun cantiere aperto. Sembrava giusto, ma aveva un difetto
+reale: capire "cosa serve ancora" guardando i cantieri è fragile — una
+risorsa può sembrare superflua e invece servire di lì a poco per un
+progetto futuro, e nel frattempo sarebbe già stata venduta. Il rischio è
+concreto: il giocatore torna al cartello per prendere il legno per una
+costruzione e lo trova vuoto, venduto da solo mentre lui non guardava.
 
-Guarda solo i cantieri *già visibili*, non l'intero albero futuro: se più
-avanti un edificio tornerà ad averne bisogno (il legno, per esempio, serve
-di nuovo per la stazione in Fase 5, dopo un tratto senza), la funzione
-torna vera da sola non appena quel cantiere si sblocca, e il cartello
-smette di vendere per lasciare che la scorta si riaccumuli in tempo —
-nessuna cache permanente, si ricalcola (con una cache invalidata a ogni
-`building:done`, per non rifare il giro di 19 edifici a ogni frame) ogni
-volta che qualcosa di rilevante cambia.
+La regola ora è più semplice e più sicura: **un cartello senza nastro non
+vende MAI finché c'è ancora posto nel magazzino** — la scorta resta lì,
+disponibile per le costruzioni, punto. Vende solo quando il magazzino è
+già pieno (`HireStationEntity.stockFull`): a quel punto l'eccedenza
+sarebbe comunque persa (l'operaio aspetterebbe all'infinito con il carico
+in spalla), quindi tanto vale convertirla in monete
+(`WorkerSystem.autoSells`, letto da `HireStationEntity.update`). Appena il
+giocatore ritira qualcosa — o il nastro svuota la scorta — il magazzino
+non è più pieno e il cartello torna semplicemente ad accumulare, senza
+vendere nulla.
 
-Il pesce è un caso particolare, non uno speciale: nessun cantiere lo
-richiede mai, quindi `resourceStillNeeded('fish')` è falso fin dal primo
-giorno — il pescatore vende da solo da subito, coerente con l'essere
-l'unico operaio pensato come reddito passivo puro (vedi sopra). Il "nuovo
-pozzo" resta comunque legato al livello massimo di resa/magazzino
-(`conveyorReady`), per tutti e cinque gli operai allo stesso modo: cambia
-solo se serve *anche* comprare il nastro per sbloccarlo, o se la scorta si
-vende già da sola.
+Non serve nessuna logica su cosa "serve ancora": lo stesso meccanismo vale
+per tutti e cinque gli operai, pesce compreso — anche il pescatore accumula
+normalmente e vende solo l'eccedenza una volta pieno il cesto, non fin dal
+primo pesce. Il nastro trasportatore resta l'unico modo per vendere
+*sempre*, non solo l'eccedenza: è quello il vero traguardo pagato.
 
 ### Un bonus per ogni edificio
 

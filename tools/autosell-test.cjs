@@ -1,9 +1,9 @@
 /**
- * autosell-test.cjs — Verifica il "villaggio autosufficiente"
- * (WorkerSystem.resourceStillNeeded/autoSells): un cartello vende da solo
- * una risorsa — gratis, senza nastro — appena nessun cantiere aperto ne ha
- * più bisogno, e torna a farla accumulare a mano se in futuro un cantiere
- * la richiede di nuovo.
+ * autosell-test.cjs — Verifica il "villaggio autosufficiente": un cartello
+ * SENZA nastro non vende nulla finché c'è ancora posto (la risorsa resta
+ * disponibile per le costruzioni) — vende solo l'eccedenza quando il
+ * magazzino è pieno, invece di lasciare che l'operaio la butti via
+ * aspettando in eterno. Appena scende sotto il tetto, torna ad accumulare.
  */
 const { chromium } = require('playwright');
 
@@ -20,8 +20,6 @@ const { chromium } = require('playwright');
   await page.waitForFunction(() => window.game?.loop?.running, { timeout: 120000 });
   await page.waitForTimeout(700);
 
-  // Capanna e segheria (il boscaiolo compare): la cava si sblocca e chiede
-  // ancora legno, quindi non è ancora il momento di venderlo da solo.
   await page.evaluate(() => {
     const g = window.game;
     g.addCoins(500000);
@@ -31,80 +29,63 @@ const { chromium } = require('playwright');
       for (const k in b.def.cost) b.paid[k] = b.def.cost[k];
       b._startRising(g); b.riseT = 1; b._finish(g);
     }
+    g.workers.counts.lumberjack = 1;
+    g.player.x = 200; g.player.z = 200; // lontano: niente ritiro a mano
+    g.grid.update(g.player);
   });
   await page.waitForTimeout(500);
 
-  const early = await page.evaluate(() => window.game.workers.autoSells('lumberjack'));
-  console.log('LEGNO ANCORA NECESSARIO (la cava lo richiede):', !early ? '✓' : '✗');
-
-  // assumi un boscaiolo e lascialo accumulare a mano
-  const hired = await page.evaluate(() => {
+  // magazzino a metà: NON deve vendersi da solo, resta lì per le costruzioni
+  const halfFull = await page.evaluate(() => {
     const g = window.game;
     const st = g.workers.stations.lumberjack;
-    g.player.x = st.x; g.player.z = st.z;
-    g.grid.update(g.player);
-    for (let i = 0; i < 40 && (g.workers.counts.lumberjack ?? 0) === 0; i++) st.update(0.1, g);
-    return g.workers.counts.lumberjack ?? 0;
+    const cap = g.workers.stockCap('lumberjack');
+    st.stock = Math.floor(cap / 2);
+    for (let i = 0; i < 30; i++) st.update(0.1, g);
+    return { stock: st.stock, cap, autoSells: g.workers.autoSells('lumberjack') };
   });
-  console.log('BOSCAIOLO ASSUNTO:', hired === 1 ? '✓' : '✗');
+  console.log('MAGAZZINO A METÀ:', JSON.stringify(halfFull));
+  console.log('NON SI VENDE (resta disponibile per le costruzioni):',
+    !halfFull.autoSells && halfFull.stock === Math.floor(halfFull.cap / 2) ? '✓' : '✗');
 
-  await page.evaluate(() => {
+  // magazzino pieno: ora sì, vende l'eccedenza
+  const fullResult = await page.evaluate(() => {
     const g = window.game;
-    g.player.x = 200; g.player.z = 200;
-    g.grid.update(g.player);
-  });
-  await page.waitForTimeout(9000);
-
-  const beforeObsolete = await page.evaluate(() => ({
-    stock: window.game.workers.stations.lumberjack.stock,
-    coins: window.game.stats.coins,
-  }));
-  console.log('SCORTA ACCUMULATA A MANO (legno ancora utile):', JSON.stringify(beforeObsolete),
-    beforeObsolete.stock > 0 ? '✓' : '✗');
-
-  // finisce tutti gli edifici che chiedono ancora legno, fino al parco:
-  // dopo, il prossimo cantiere (la banca) non ne ha più bisogno
-  const afterBuild = await page.evaluate(() => {
-    const g = window.game;
-    const order = ['quarry', 'house', 'warehouse', 'guardTower',
-      'bridge', 'mill', 'smithy', 'townhall', 'shops', 'park'];
-    for (const id of order) {
-      const b = g.world.buildings[id];
-      b.available = true; b.unlocked = true;
-      for (const k in b.def.cost) b.paid[k] = b.def.cost[k];
-      b._startRising(g); b.riseT = 1; b._finish(g);
-    }
+    const st = g.workers.stations.lumberjack;
+    const cap = g.workers.stockCap('lumberjack');
+    st.stock = cap;
+    const coinsBefore = g.stats.coins;
+    const wasFullAtStart = g.workers.autoSells('lumberjack');
+    for (let i = 0; i < 30; i++) st.update(0.1, g);
     return {
-      bankAvailable: g.world.buildings.bank.available,
-      bankCostsWood: !!g.world.buildings.bank.def.cost.wood,
-      autoSells: g.workers.autoSells('lumberjack'),
+      cap, wasFullAtStart, stockAfter: st.stock, coinsGained: g.stats.coins - coinsBefore,
     };
   });
-  console.log('DOPO IL PARCO:', JSON.stringify(afterBuild));
-  console.log('IL LEGNO NON SERVE PIÙ (la banca non lo richiede) — SI VENDE DA SOLO:',
-    afterBuild.autoSells ? '✓' : '✗');
+  console.log('MAGAZZINO PIENO:', JSON.stringify(fullResult));
+  console.log('VENDEVA APPENA PIENO:', fullResult.wasFullAtStart ? '✓' : '✗');
+  console.log('HA VENDUTO L\'ECCEDENZA (monete guadagnate):', fullResult.coinsGained > 0 ? '✓' : '✗');
 
-  // negozio: deve dirlo chiaramente, senza che sia stato comprato nulla
+  // non svuota tutto: si ferma appena non è più pieno, per lasciarne
+  // comunque disponibile per le costruzioni
+  console.log('SI FERMA SOTTO IL TETTO (non svuota tutto il magazzino):',
+    fullResult.stockAfter > 0 && fullResult.stockAfter < fullResult.cap ? '✓'
+      : (fullResult.stockAfter === fullResult.cap - 1 ? '✓' : `✗ (${fullResult.stockAfter}/${fullResult.cap})`));
+  const stillNotFull = await page.evaluate(() => window.game.workers.autoSells('lumberjack'));
+  console.log('NON VENDE PIÙ ORA CHE NON È PIENO:', !stillNotFull ? '✓' : '✗');
+
+  // negozio: il manager compare comunque una volta pronti resa/magazzino,
+  // indipendentemente dal fatto che il magazzino sia pieno o no
+  await page.evaluate(() => {
+    const g = window.game;
+    for (let i = 0; i < 10; i++) g.workers.buyUpgrade('lumberjack', 'yield', g);
+    for (let i = 0; i < 10; i++) g.workers.buyUpgrade('lumberjack', 'capacity', g);
+  });
   await page.click('#hud-shop');
   await page.waitForTimeout(300);
-  const shopHasNotice = await page.evaluate(() =>
-    Array.from(document.querySelectorAll('.shop-item-title'))
-      .some((e) => e.textContent.includes('Boscaiolo: si vende da solo')));
-  console.log('IL NEGOZIO LO SPIEGA (senza bisogno di comprare nulla):', shopHasNotice ? '✓' : '✗');
+  const hasManager = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('.shop-item-title')).some((e) => e.textContent.includes('Manager')));
+  console.log('IL MANAGER COMPARE NEL NEGOZIO (indipendente dal magazzino pieno):', hasManager ? '✓' : '✗');
   await page.click('#shop-close');
-
-  // ora deve svuotarsi da solo, senza ritiro a mano — il raffronto è con le
-  // monete di PRIMA della transizione: l'unità già in scorta potrebbe
-  // essersi già venduta durante l'apertura del negozio qui sopra (il
-  // nastro/l'autovendita è velocissimo), quindi non è un buon "prima".
-  await page.waitForTimeout(3000);
-  const after = await page.evaluate(() => ({
-    stock: window.game.workers.stations.lumberjack.stock,
-    coins: window.game.stats.coins,
-  }));
-  console.log('DOPO QUALCHE SECONDO (giocatore ancora lontanissimo):', JSON.stringify(after));
-  console.log('SI È VENDUTA DA SOLA (scorta svuotata, monete salite, nessun ritiro a mano):',
-    after.stock === 0 && after.coins > beforeObsolete.coins ? '✓' : '✗');
 
   console.log('FPS:', await page.evaluate(() => Math.round(window.game.loop.fps)));
   console.log(errs.length ? 'ERRORI:\n' + errs.slice(0, 15).join('\n') : 'Nessun errore.');

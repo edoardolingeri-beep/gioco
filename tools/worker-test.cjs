@@ -107,7 +107,8 @@ const shot = (n) => `/tmp/wk-${n}.png`;
     afterCollect.zainoLegno > 0 && afterCollect.stockRimasto < stockInfo.stock ? '✓ travasato' : '✗');
   await page.screenshot({ path: shot('2-ritirato') });
 
-  /* --- il magazzino pieno deve far aspettare l'operaio, non buttare via nulla --- */
+  /* --- il magazzino pieno non deve mai sforare: l'eccedenza o aspetta con
+     l'operaio, o si vende da sola (WorkerSystem.autoSells) — mai persa --- */
   await page.evaluate(([x, z]) => {
     const g = window.game;
     const s = g.workers.stations.lumberjack;
@@ -125,8 +126,11 @@ const shot = (n) => `/tmp/wk-${n}.png`;
       operaiInAttesa: workers.filter((w) => w.state === 3 && w.carrying).length,
     };
   });
-  console.log('MAGAZZINO PIENO — operaio aspetta invece di sprecare:', JSON.stringify(fullState),
-    fullState.stock === fullState.cap ? '✓ non ha superato il limite' : '✗');
+  // Non deve mai superare il tetto — che sia fermo al massimo (operaio in
+  // attesa) o appena sotto (l'eccedenza si è già venduta da sola).
+  console.log('MAGAZZINO PIENO — non supera mai il tetto:', JSON.stringify(fullState),
+    fullState.stock <= fullState.cap && fullState.stock >= fullState.cap - 1
+      ? '✓ non ha superato il limite' : '✗');
 
   /* --- salvataggio e ricarica: la scorta deve sopravvivere --- */
   await page.evaluate(() => window.game.save());

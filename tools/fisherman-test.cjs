@@ -1,10 +1,9 @@
 /**
  * fisherman-test.cjs — Verifica il pescatore: l'unico operaio "stanziale"
  * (non cerca né cammina, pesca fermo al suo molo vicino al ponte) e la
- * nuova risorsa "pesce" che sblocca. Il pesce non serve MAI a nessun
- * cantiere (vedi WorkerSystem.resourceStillNeeded), quindi il pescatore
- * vende da solo fin dal primo giorno, senza dover comprare il nastro —
- * il test verifica le monete che arrivano, non uno zaino da ritirare.
+ * nuova risorsa "pesce" che sblocca. Come ogni altro operaio, accumula al
+ * cartello finché c'è posto — il test verifica che la scorta cresca,
+ * senza vendersi da sola finché il magazzino non è pieno.
  */
 const { chromium } = require('playwright');
 
@@ -39,8 +38,8 @@ const { chromium } = require('playwright');
   console.log('CARTELLO PESCATORE:', JSON.stringify(station), station?.resource === 'fish' ? '✓' : '✗');
 
   const auto = await page.evaluate(() => window.game.workers.autoSells('fisherman'));
-  console.log('IL PESCE SI VENDE DA SOLO FIN DA SUBITO (nessun cantiere lo richiede mai):',
-    auto ? '✓' : '✗');
+  console.log('NON SI VENDE DA SOLO SUBITO (magazzino non ancora pieno, niente nastro):',
+    !auto ? '✓' : '✗');
 
   // assumi tre pescatori
   const hired = await page.evaluate(async () => {
@@ -67,8 +66,9 @@ const { chromium } = require('playwright');
   const allWorking = posSamples.length === 3 && posSamples.every((w) => w.state === 2);
   console.log('TUTTI GIÀ AL LAVORO SUL MOLO (stato WORK):', allWorking ? '✓' : '✗');
 
-  // il giocatore si allontana: le monete devono comunque arrivare da sole
-  // (nessuno zaino da riempire: il pesce si vende in automatico)
+  // il giocatore si allontana: la scorta deve comunque crescere (il
+  // magazzino da 20 non si riempie in questa finestra, quindi nessuna
+  // vendita automatica deve scattare)
   const coinsBefore = await page.evaluate(() => {
     const g = window.game;
     g.player.x = 200; g.player.z = 200;
@@ -87,8 +87,10 @@ const { chromium } = require('playwright');
     };
   });
   console.log('DOPO 18s SENZA GIOCATORE VICINO:', JSON.stringify(after));
-  console.log('MONETE ARRIVATE DA SOLE (nessun ritiro a mano):',
-    after.coins > coinsBefore ? `✓ (+${after.coins - coinsBefore})` : '✗');
+  console.log('HA ACCUMULATO PESCE (non venduto, magazzino non pieno):',
+    after.stock > 0 ? '✓' : '✗');
+  console.log('MONETE FERME (nessuna vendita automatica):',
+    after.coins === coinsBefore ? '✓' : '✗');
   const stayedPut = after.positions.every((p, i) =>
     Math.abs(p[0] - posSamples[i].x) < 0.05 && Math.abs(p[1] - posSamples[i].z) < 0.05);
   console.log('NON SI È MOSSO DAL MOLO:', stayedPut ? '✓' : '✗');

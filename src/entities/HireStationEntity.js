@@ -167,30 +167,34 @@ export class HireStationEntity extends Entity {
     if (this.panelT < 0.02) return;
     const info = RESOURCE_INFO[this.def.resource];
     const hasConveyor = this.workers.hasConveyor(this.def.id);
-    const auto = this.workers.autoSells(this.def.id);
 
-    if (auto) {
+    if (hasConveyor) {
       // Niente più "vieni a ritirare": si vende da sé. Un solo promemoria
-      // discreto, così si capisce perché il magazzino qui non si riempie mai
-      // — e, se non è per il nastro, perché il paese l'abbia deciso da solo.
+      // discreto, così si capisce perché il magazzino qui non si riempie mai.
       drawPanel(ctx, cam, dpr, this.x, 2.55, this.z, {
-        title: hasConveyor
-          ? '🏭 Nastro trasportatore — vende da solo'
-          : `${info.icon} Non serve più al villaggio — si vende da solo`,
+        title: '🏭 Nastro trasportatore — vende da solo',
         appear: this.panelT,
         width: 230,
         titleColor: '#9ef7c0',
+      });
+    } else if (this.stockFull) {
+      // Pieno e senza nastro: l'operaio non butta via il carico né resta
+      // fermo ad aspettare — l'eccedenza si vende da sola, il resto aspetta
+      // comunque qui pronto da ritirare per le costruzioni.
+      drawPanel(ctx, cam, dpr, this.x, 2.55, this.z, {
+        title: `${info.icon} Magazzino pieno — vende l'eccedenza, vieni a ritirare il resto`,
+        appear: this.panelT,
+        width: 250,
+        titleColor: '#ffce54',
       });
     } else if (this.stock > 0) {
       // Il magazzino dell'operaio: quando c'è qualcosa pronto, è il pannello
       // più in alto, così è la prima cosa che si legge avvicinandosi.
       drawPanel(ctx, cam, dpr, this.x, 2.55, this.z, {
-        title: this.stockFull
-          ? `${info.icon} Magazzino pieno — vieni a ritirare!`
-          : `${info.icon} ${this.stock} pronti — avvicinati per ritirarli`,
+        title: `${info.icon} ${this.stock} pronti — avvicinati per ritirarli`,
         appear: this.panelT,
         width: 220,
-        titleColor: this.stockFull ? '#ffce54' : info.color,
+        titleColor: info.color,
       });
     }
 

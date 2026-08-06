@@ -14,8 +14,6 @@
  */
 
 import { WORKER_TYPES } from '../data/workers.js';
-import { BUILD_ORDER, BUILDINGS } from '../data/buildings.js';
-import { BUILD_STATE } from '../entities/BuildingEntity.js';
 import { HireStationEntity } from '../entities/HireStationEntity.js';
 import { WorkerEntity } from '../entities/WorkerEntity.js';
 
@@ -35,13 +33,6 @@ export class WorkerSystem {
     this.conveyors = {};
     /** "Nuovi pozzi" comprati (raddoppiano la resa): {typeId: true}. */
     this.pits2 = {};
-
-    // `resourceStillNeeded` è chiamata ogni frame da OGNI cartello attivo
-    // (update() e drawUI()): ricalcolarla scorrendo tutti i cantieri ogni
-    // volta sarebbe lavoro sprecato quasi sempre uguale a un attimo prima.
-    // La cache si invalida solo quando un cantiere finisce davvero.
-    this._obsoleteCache = null;
-    game.bus.on('building:done', () => { this._obsoleteCache = null; });
   }
 
   /**
@@ -163,54 +154,29 @@ export class WorkerSystem {
   /* ---------------------------------------------------- villaggio autosufficiente */
 
   /**
-   * True se almeno un cantiere GIÀ VISIBILE (sbloccato, non ancora finito)
-   * costa ancora questa risorsa. Guarda solo i cantieri disponibili ORA,
-   * non l'intero albero futuro — apposta: se fra qualche edificio ne
-   * servirà di nuovo, tornerà vero da sola non appena quel cantiere si
-   * sblocca, e il cartello smette di vendere per far riaccumulare scorta
-   * in tempo. Finché quel momento non arriva, però, non ha senso far
-   * portare a mano al giocatore una risorsa che nessun cantiere aperto
-   * sta aspettando.
-   */
-  resourceStillNeeded(resource) {
-    if (!this._obsoleteCache) {
-      const buildings = this.game.world.buildings;
-      const cache = {};
-      for (const id of BUILD_ORDER) {
-        const b = buildings[id];
-        if (!b || !b.available || b.state === BUILD_STATE.DONE) continue;
-        for (const res in BUILDINGS[id].cost) cache[res] = true;
-      }
-      this._obsoleteCache = cache;
-    }
-    return this._obsoleteCache[resource] === true;
-  }
-
-  /**
    * True se il cartello vende da solo la scorta — per il nastro
-   * trasportatore comprato, o perché nessun cantiere aperto ha più
-   * bisogno di quella risorsa. In quel caso non ha senso chiedere al
-   * giocatore di portarla a mano da nessuna parte.
+   * trasportatore comprato, o perché il magazzino è pieno: senza il
+   * nastro, il cartello NON vende finché c'è ancora posto, così la
+   * risorsa resta lì disponibile per le costruzioni; vende solo
+   * l'eccedenza che altrimenti l'operaio dovrebbe buttare via aspettando
+   * con il carico in spalla. Appena il giocatore passa a ritirare (o il
+   * nastro svuota la scorta), il magazzino non è più pieno e si torna ad
+   * accumulare normalmente.
    */
   autoSells(typeId) {
     if (this.hasConveyor(typeId)) return true;
-    return !this.resourceStillNeeded(WORKER_TYPES[typeId].resource);
+    const st = this.stations[typeId];
+    return !!st && st.stockFull;
   }
 
   /* ------------------------------------------------------------- nuovo pozzo */
 
   hasPit2(typeId) { return !!this.pits2[typeId]; }
 
-  /**
-   * Un traguardo oltre il traguardo: resa e magazzino devono essere già al
-   * livello massimo (`conveyorReady`, la stessa fatica per tutti e cinque
-   * gli operai) E la scorta deve già vendersi da sola — nastro comprato, o
-   * risorsa non più richiesta da nessun cantiere aperto (per il pescatore
-   * è sempre vero: nessun cantiere ha mai chiesto pesce). Senza la scorta
-   * che si vende da sola raddoppiare una resa che il giocatore deve ancora
-   * venire a ritirare a mano non si sentirebbe.
-   */
-  pit2Ready(typeId) { return this.conveyorReady(typeId) && this.autoSells(typeId); }
+  /** Un traguardo oltre il traguardo: si può scavare solo dopo aver già
+   *  installato il nastro trasportatore — altrimenti raddoppiare una resa
+   *  che il giocatore deve ancora venire a ritirare a mano non si sente. */
+  pit2Ready(typeId) { return this.hasConveyor(typeId); }
 
   buyPit2(typeId, game) {
     if (!this.stations[typeId] || this.hasPit2(typeId) || !this.pit2Ready(typeId)) return false;
