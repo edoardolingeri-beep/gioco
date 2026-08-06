@@ -814,6 +814,53 @@ mappa. Per il resto è un cantiere come tutti gli altri (si paga in
 risorse, sale con la stessa animazione): eredita da `BuildingEntity` e
 aggiunge solo il comportamento di combattimento.
 
+### I ladri: un'incursione vera, non un dado nascosto
+
+Lupi e orsi minacciano il giocatore; niente, finora, minacciava il
+villaggio in sé. `RaidSystem` aggiunge bande di ladri incappucciati
+(`ThiefEntity`) che ogni tanto compaiono ai margini della mappa e puntano
+dritti al centro del villaggio, dove tengono la cassa: se ci arrivano
+indisturbati rubano una parte delle monete e fuggono; se il giocatore o la
+torretta li abbattono prima, muoiono senza aver rubato nulla.
+
+La parte interessante è che la difesa non è un numero nascosto da
+confrontare — è fisica, con lo stesso motore di collisioni di tutto il
+resto:
+
+- **Il recinto blocca davvero.** Come lupi e abitanti, un ladro non ha
+  `opensGates` (vedi `FenceGateEntity`): un varco chiuso lo respinge
+  esattamente come respingerebbe il giocatore. Costruire la staccionata
+  (livello 4, la casa) non è più solo scenografia — è la prima vera difesa
+  contro i raid, prima ancora della torretta.
+- **La torretta li colpisce anche lei.** `TowerEntity._defend` cercava solo
+  lupi e orsi nel suo raggio: ora cerca anche i ladri, stesso danno, stessa
+  ricompensa concettuale (monete per ognuno respinto).
+- **Il giocatore può sempre intervenire di persona**, a colpi, come contro
+  un lupo (`Player.js` cerca anche `ThiefEntity` fra i bersagli a tiro).
+
+Un ladro bloccato al recinto non aspetta all'infinito: se non trova un
+varco aperto entro `CFG.raid.giveUpTime`, rinuncia e fugge senza aver
+rubato nulla — altrimenti un giocatore con un buon recinto non vedrebbe mai
+finire un raid, solo ladri fermi contro il muro per sempre.
+
+Un raid intero (2-4 ladri) mostra un unico riepilogo alla fine — non un
+popup per ogni singolo ladro — e solo se c'è stato un furto vero: se il
+recinto li respinge tutti, basta un toast (`RaidSystem._finishRaid`).
+
+**Un bug vero, trovato scrivendo il test**: la prima versione faceva
+comparire i ladri a caso lungo l'intero bordo della mappa (raggio ~43,
+come i lupi). Ma il fiume corre a nord, ed è un muro invalicabile senza il
+ponte — proprio come il recinto, solo che non ha `opensGates` per
+*nessuno*. Un ladro nato oltre il fiume restava bloccato contro la riva
+finché non rinunciava, anche in un villaggio senza alcuna difesa: un "muro
+gratis" che non aveva niente a che fare con quello che il giocatore aveva
+costruito, e rendeva metà dei raid banalmente innocui per il motivo
+sbagliato. Sistemato facendoli comparire solo dal lato raggiungibile del
+villaggio (mai da oltre il fiume) e vicino al recinto invece che al bordo
+estremo della mappa — anche perché senza un vero pathfinding, attraversare
+tutta la foresta rischiava comunque di far scadere `giveUpTime` prima di
+arrivare, pure sul lato giusto.
+
 ---
 
 ## Roadmap
@@ -826,10 +873,13 @@ Le cinque fasi previste sono completate. Gli sviluppi naturali da qui:
 
 - **Nuovi biomi** ai bordi della mappa: montagne, deserto, ghiacciaio,
   vulcano, isole, ognuno con materiali, animali e costruzioni esclusive.
-- **Villaggi rivali**: incursioni vere e proprie invece dei soli animali
-  selvatici — la torretta di guardia è già lì ad aspettarle.
-- **Altri nemici** (goblin, scheletri) con comportamenti diversi dal lupo
-  e dall'orso: chi ruba e scappa, chi attacca in gruppo.
+- **Una seconda torretta** (o un potenziamento della prima): oggi ce n'è
+  una sola, in una posizione fissa — bastava contro lupi e orsi, ma un
+  villaggio molto esteso, o cresciuto oltre il livello 9 (quando la
+  staccionata viene smontata, vedi `_removeFence`), resta con una sola
+  vera difesa contro i raid dei ladri.
+- **Altri nemici** (goblin, scheletri) con comportamenti diversi da lupo,
+  orso e ladro: chi attacca in gruppo, chi scava per aggirare il recinto.
 - **Porto e navi**, sfruttando il sistema di percorsi già usato per il tram.
 - **Meteo**: pioggia e neve, con lo stesso schema a veli usato dalla notte.
 - **Selettore x1/x10/xMax** nel negozio, per comprare più livelli di

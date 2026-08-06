@@ -99,6 +99,16 @@ export class HUD {
           <button class="btn" id="event-decline">Lascia perdere</button>
         </div>
       </div>
+
+      <!-- Riepilogo di un raid concluso con un furto — vedi RaidSystem -->
+      <div class="sheet" id="hud-raid-sheet" data-ui hidden>
+        <div class="sheet-card event-card">
+          <h2 id="raid-title">Raid</h2>
+          <div class="welcome-mascot" id="raid-icon">🥷</div>
+          <div class="event-desc" id="raid-desc"></div>
+          <button class="btn" id="raid-close">Ho capito</button>
+        </div>
+      </div>
     `;
 
     this.el = {
@@ -132,6 +142,10 @@ export class HUD {
       eventDesc: this.root.querySelector('#event-desc'),
       eventAccept: this.root.querySelector('#event-accept'),
       eventDecline: this.root.querySelector('#event-decline'),
+      raidSheet: this.root.querySelector('#hud-raid-sheet'),
+      raidTitle: this.root.querySelector('#raid-title'),
+      raidIcon: this.root.querySelector('#raid-icon'),
+      raidDesc: this.root.querySelector('#raid-desc'),
     };
 
     this.healthShown = 1;
@@ -208,6 +222,9 @@ export class HUD {
       this._eventOnAccept?.();
       this._eventOnAccept = null;
     });
+    this.root.querySelector('#raid-close').addEventListener('click', () => {
+      this.el.raidSheet.hidden = true;
+    });
   }
 
   /**
@@ -223,6 +240,20 @@ export class HUD {
     this.el.eventDecline.textContent = decline;
     this._eventOnAccept = onAccept;
     this.el.eventSheet.hidden = false;
+  }
+
+  /**
+   * Esito di un raid con un furto riuscito (vedi `RaidSystem._finishRaid`):
+   * niente scelta da fare, solo la notizia — a differenza di `showEvent`
+   * resta finché non la chiudi tu, così non passa inosservata come un toast.
+   */
+  showRaidResult({ icon, title, desc }) {
+    this.el.raidTitle.textContent = title;
+    this.el.raidIcon.textContent = icon;
+    this.el.raidDesc.textContent = desc;
+    this.el.raidSheet.hidden = false;
+    this.game.audio.hitFlesh();
+    this.game.cam.addShake(0.2);
   }
 
   /**
@@ -277,6 +308,7 @@ export class HUD {
       <div><b>${s.rocksMined}</b><span>massi</span></div>
       <div><b>${s.wolvesKilled}</b><span>lupi</span></div>
       <div><b>${s.bearsKilled}</b><span>orsi</span></div>
+      <div><b>${s.thievesRepelled}</b><span>ladri respinti</span></div>
       <div><b>${v.population}</b><span>abitanti</span></div>
       <div><b>${s.coins}</b><span>monete</span></div>
       <div><b>${s.axeLevel}</b><span>ascia</span></div>

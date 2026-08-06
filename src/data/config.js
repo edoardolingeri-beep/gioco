@@ -235,6 +235,39 @@ export const CFG = {
     interval: 1.3,
   },
 
+  /* -------------------------------------------------------- raid dei ladri */
+  raid: {
+    // Il primo raid arriva solo dopo che il recinto (livello 4, vedi
+    // VillageSystem STAGES) è comparso da un po': tempo di costruirlo, e
+    // magari anche la torretta, prima del primo assaggio.
+    minVillageLevel: 4,
+    firstDelay: 220,
+    interval: [200, 340],
+    thievesPerRaid: [2, 4],
+    hp: 26,
+    speed: 3.6,
+    // Distanza dal recinto (vero o solo teorico, se non ancora costruito) a
+    // cui compaiono: non dall'estremo bordo della mappa — altrimenti, senza
+    // un vero pathfinding, la sola traversata della foresta rischierebbe di
+    // far scadere `giveUpTime` prima ancora di arrivare al varco.
+    spawnMargin: 15,
+    // Monete guadagnate per ogni ladro respinto (ucciso dal giocatore o
+    // dalla torretta), come la ricompensa di un lupo.
+    reward: 6,
+    // Se arriva indisturbato al centro del villaggio, ruba una frazione
+    // delle monete in cassa (con un tetto minimo e massimo, così un raid
+    // fa male anche a inizio partita e non svuota mai la cassa a fine).
+    stealFraction: 0.1,
+    stealMin: 25,
+    stealMax: 500,
+    // Quanto deve avvicinarsi al centro per riuscire nel furto.
+    approachRadius: 2.2,
+    // Se resta bloccato al recinto (o incastrato nella vegetazione) per
+    // troppo tempo senza trovare un varco aperto, rinuncia e fugge senza
+    // aver rubato nulla.
+    giveUpTime: 40,
+  },
+
   /* ----------------------------------------------------------------- mondo */
   world: {
     seed: 20260802,

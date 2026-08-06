@@ -16,6 +16,7 @@ import { TreeEntity, TREE_STATE } from './TreeEntity.js';
 import { RockEntity, ROCK_STATE } from './RockEntity.js';
 import { WolfEntity } from './WolfEntity.js';
 import { BearEntity } from './BearEntity.js';
+import { ThiefEntity } from './ThiefEntity.js';
 import { depthOf } from '../render/Projection.js';
 import { drawPanel } from '../ui/WorldUI.js';
 import { clamp, damp, angleTowards, angleDelta, TAU, easeOutBack } from '../core/MathUtils.js';
@@ -267,7 +268,7 @@ export class Player extends Entity {
     let enemy = null, enemyD = Infinity;
     for (let i = 0; i < near.length; i++) {
       const e = near[i];
-      if (!(e instanceof WolfEntity || e instanceof BearEntity) || !e.alive) continue;
+      if (!(e instanceof WolfEntity || e instanceof BearEntity || e instanceof ThiefEntity) || !e.alive) continue;
       const d = Math.hypot(e.x - this.x, e.z - this.z);
       if (d <= CFG.player.attackRange + e.radius && d < enemyD) { enemyD = d; enemy = e; }
     }

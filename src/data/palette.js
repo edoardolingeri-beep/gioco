@@ -74,6 +74,15 @@ export const PAL = {
   bearEye:    [ 30,  24,  20],
   bearClaw:   [244, 240, 230],
 
+  /* ladri (raid): cinque mantelli scuri diversi, stessa foggia incappucciata */
+  thiefCloakA: [ 42,  42,  48],
+  thiefCloakB: [ 48,  36,  54],
+  thiefCloakC: [ 36,  46,  40],
+  thiefCloakD: [ 56,  40,  32],
+  thiefCloakE: [ 32,  36,  50],
+  thiefFace:   [ 96,  78,  70],
+  thiefEye:    [220,  64,  52],
+
   /* abitanti (varianti di vestiario) */
   npcShirtA:  [214, 122,  96],
   npcShirtB:  [126, 190, 128],

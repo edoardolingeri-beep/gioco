@@ -168,7 +168,12 @@ function pose(action, t) {
 
 /**
  * Costruisce la mesh del personaggio.
- * @param {object} o { yaw, action:'idle'|'walk'|'chop', t:0..1, axeLevel, bagLevel }
+ * @param {object} o { yaw, action:'idle'|'walk'|'chop', t:0..1, axeLevel, bagLevel,
+ *   hooded } — `hooded` (i ladri, vedi `entities/ThiefEntity.js`) sostituisce
+ *   capelli e ciuffo con un cappuccio che copre quasi tutta la testa e
+ *   aggiunge un mantello sulla schiena: stesso rig, aspetto tutto diverso,
+ *   riutilizzando `shirt`/`shirtAlt`/`hair` come colori del cappuccio invece
+ *   che aggiungere parametri nuovi.
  */
 export function buildCharacter(o) {
   const {
@@ -178,6 +183,7 @@ export function buildCharacter(o) {
     skin = PAL.skin, shirt = PAL.shirt, shirtAlt = PAL.shirtAlt,
     pants = PAL.pants, hair = PAL.hair,
     withTool = true,
+    hooded = false,
   } = o;
   const p = pose(action, t);
   const g = M.mesh();
@@ -237,17 +243,31 @@ export function buildCharacter(o) {
   const head = M.mesh();
   const skull = M.box(P.headR * 1.8, P.headR * 1.85, P.headR * 1.7, skin, { taper: 0.12 });
   M.merge(head, skull);
-  // capelli
-  const hairMesh = M.box(P.headR * 1.86, P.headR * 0.72, P.headR * 1.76, hair, { taper: 0.16 });
-  M.translate(hairMesh, 0, P.headR * 1.28, 0);
-  M.merge(head, hairMesh);
-  // ciuffo frontale
-  const fringe = M.box(P.headR * 1.7, P.headR * 0.34, P.headR * 0.3, hair);
-  M.translate(fringe, 0, P.headR * 1.12, P.headR * 0.74);
-  M.merge(head, fringe);
-  // occhi (piccoli quad scuri sulla faccia +Z)
+  if (hooded) {
+    // Il cappuccio copre quasi tutta la testa, niente capelli né ciuffo: un
+    // orlo più scuro sulla fronte basta a leggerlo a colpo d'occhio anche
+    // piccolo sullo schermo.
+    const hood = M.box(P.headR * 2.0, P.headR * 1.5, P.headR * 1.85, hair, { taper: 0.24 });
+    M.translate(hood, 0, P.headR * 0.62, -P.headR * 0.06);
+    M.merge(head, hood);
+    const brim = M.box(P.headR * 1.55, P.headR * 0.28, P.headR * 0.32, shirtAlt);
+    M.translate(brim, 0, P.headR * 0.04, P.headR * 0.96);
+    M.merge(head, brim);
+  } else {
+    // capelli
+    const hairMesh = M.box(P.headR * 1.86, P.headR * 0.72, P.headR * 1.76, hair, { taper: 0.16 });
+    M.translate(hairMesh, 0, P.headR * 1.28, 0);
+    M.merge(head, hairMesh);
+    // ciuffo frontale
+    const fringe = M.box(P.headR * 1.7, P.headR * 0.34, P.headR * 0.3, hair);
+    M.translate(fringe, 0, P.headR * 1.12, P.headR * 0.74);
+    M.merge(head, fringe);
+  }
+  // occhi (piccoli quad scuri sulla faccia +Z — rossi e più stretti sotto
+  // il cappuccio, la sola cosa che si vede in ombra)
+  const eyeColor = hooded ? PAL.thiefEye : [40, 40, 52];
   const eye = (side) => {
-    const e = M.box(0.055, 0.075, 0.03, [40, 40, 52]);
+    const e = M.box(0.055, hooded ? 0.05 : 0.075, 0.03, eyeColor);
     M.translate(e, side * 0.085, P.headR * 0.72, P.headR * 0.86);
     return e;
   };
@@ -259,6 +279,13 @@ export function buildCharacter(o) {
 
   /* --- zaino --- */
   if (withTool) M.merge(torso, makeBackpack(bagLevel));
+
+  /* --- mantello (solo i ladri incappucciati) --- */
+  if (hooded) {
+    const cloak = M.box(P.torsoW * 1.05, P.torsoH * 1.55, P.torsoD * 0.42, shirt, { taper: -0.18 });
+    M.translate(cloak, 0, P.hipY - P.torsoH * 0.18, -P.torsoD * 0.58);
+    M.merge(torso, cloak);
+  }
 
   /* --- inclinazione generale del busto + rimbalzo --- */
   M.rotX(torso, p.lean, P.hipY, 0);

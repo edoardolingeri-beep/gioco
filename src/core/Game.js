@@ -27,6 +27,7 @@ import { QualityManager } from '../systems/QualityManager.js';
 import { VillageSystem } from '../systems/VillageSystem.js';
 import { EnemySpawner } from '../systems/EnemySpawner.js';
 import { EventSystem } from '../systems/EventSystem.js';
+import { RaidSystem } from '../systems/RaidSystem.js';
 import { BearEntity } from '../entities/BearEntity.js';
 import { TrafficSystem } from '../systems/TrafficSystem.js';
 import { WorkerSystem } from '../systems/WorkerSystem.js';
@@ -88,7 +89,7 @@ export class Game {
       goldSellBonus: 0,
       // contatori
       treesChopped: 0, rocksMined: 0, ironMined: 0, goldMined: 0,
-      wolvesKilled: 0, bearsKilled: 0, upgradeIndex: 0,
+      wolvesKilled: 0, bearsKilled: 0, thievesRepelled: 0, coinsStolen: 0, upgradeIndex: 0,
       // quante volte il fumetto "serve il piccone" è già comparso, per tipo
       // di risorsa: dopo le prime volte si fa vedere solo se ti fermi lì
       rockHintsSeen: {},
@@ -116,6 +117,7 @@ export class Game {
     this.village = new VillageSystem(this);
     this.spawner = new EnemySpawner(this);
     this.events = new EventSystem(this);
+    this.raid = new RaidSystem(this);
     this.traffic = new TrafficSystem(this);
     this.workers = new WorkerSystem(this);
 
@@ -174,6 +176,7 @@ export class Game {
       this._unlockNextSite(b.def.id);
       this.spawner.enable();
       this.events.enable();
+      this.raid.enable();
       this.save();
     });
 
@@ -185,6 +188,14 @@ export class Game {
       const reward = (isBear ? CFG.enemies.bear.reward : CFG.enemies.wolf.reward) * (e.rewardMul ?? 1);
       if (isBear) this.stats.bearsKilled++; else this.stats.wolvesKilled++;
       this.addCoins(reward, e.x, 1.2, e.z);
+      this.audio.coin(0);
+    });
+
+    // Un ladro respinto (dal giocatore o dalla torretta) rende comunque
+    // qualcosa: la ricompensa arriva qui, il conteggio per il raid intero
+    // (furti, respinti) lo tiene `RaidSystem._finishRaid`.
+    this.bus.on('thief:repelled', (e) => {
+      this.addCoins(CFG.raid.reward, e.x, 1.2, e.z);
       this.audio.coin(0);
     });
 
@@ -333,6 +344,7 @@ export class Game {
     this.world.update(dt, this);
     this.spawner.update(dt, this);
     this.events.update(dt, this);
+    this.raid.update(dt, this);
     this.traffic.update(dt);
     this.carry.update(dt);
     this.pickups.update(dt);
@@ -493,6 +505,8 @@ export class Game {
         goldMined: this.stats.goldMined,
         wolvesKilled: this.stats.wolvesKilled,
         bearsKilled: this.stats.bearsKilled,
+        thievesRepelled: this.stats.thievesRepelled,
+        coinsStolen: this.stats.coinsStolen,
         villageLevel: this.village.level,
         villageExpansions: this.village.expansions,
         dayTime: this.dayNight.time,
@@ -619,6 +633,8 @@ export class Game {
     s.goldMined = data.goldMined ?? 0;
     s.wolvesKilled = data.wolvesKilled ?? 0;
     s.bearsKilled = data.bearsKilled ?? 0;
+    s.thievesRepelled = data.thievesRepelled ?? 0;
+    s.coinsStolen = data.coinsStolen ?? 0;
     this.recomputeStats();
 
     const w = this.world;
@@ -660,7 +676,12 @@ export class Game {
     // ricostruisce già alla misura giusta, non a quella base.
     this.village.expansions = data.villageExpansions ?? 0;
     const lvl = data.villageLevel ?? (saved.hut?.state === BUILD_STATE.DONE ? 1 : 0);
-    if (lvl > 0) { this.village.restore(lvl); this.spawner.enable(); this.events.enable(); }
+    if (lvl > 0) {
+      this.village.restore(lvl);
+      this.spawner.enable();
+      this.events.enable();
+      this.raid.enable();
+    }
     this.music.setPhase(this.village.phase);
     // Il traffico si riattiva senza annunci (ci pensa già `onRestore`, ma
     // teniamo anche il flag salvato come rete di sicurezza).

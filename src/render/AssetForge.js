@@ -40,6 +40,26 @@ const NPC_LOOKS = [
 const NPC_DIRS = 8;
 const NPC_FRAMES = 6;
 
+/**
+ * I ladri (raid, vedi `RaidSystem`/`ThiefEntity`): stesso rig di un
+ * abitante qualunque, ma `hooded:true` (vedi `buildCharacter`) sostituisce
+ * capelli e vestiti con cappuccio e mantello. Cinque mantelli diversi, non
+ * cinque comportamenti diversi: bastano a far sembrare una banda invece di
+ * un unico ladro clonato cinque volte.
+ */
+const THIEF_LOOKS = [
+  { shirt: PAL.thiefCloakA, shirtAlt: PAL.thiefCloakA, pants: PAL.thiefCloakA,
+    hair: PAL.thiefCloakA, skin: PAL.thiefFace, hooded: true },
+  { shirt: PAL.thiefCloakB, shirtAlt: PAL.thiefCloakB, pants: PAL.thiefCloakB,
+    hair: PAL.thiefCloakB, skin: PAL.thiefFace, hooded: true },
+  { shirt: PAL.thiefCloakC, shirtAlt: PAL.thiefCloakC, pants: PAL.thiefCloakC,
+    hair: PAL.thiefCloakC, skin: PAL.thiefFace, hooded: true },
+  { shirt: PAL.thiefCloakD, shirtAlt: PAL.thiefCloakD, pants: PAL.thiefCloakD,
+    hair: PAL.thiefCloakD, skin: PAL.thiefFace, hooded: true },
+  { shirt: PAL.thiefCloakE, shirtAlt: PAL.thiefCloakE, pants: PAL.thiefCloakE,
+    hair: PAL.thiefCloakE, skin: PAL.thiefFace, hooded: true },
+];
+
 /** Orientamenti della staccionata (mezzo giro basta: è simmetrica). */
 const FENCE_DIRS = 12;
 export { FENCE_DIRS };
@@ -101,7 +121,7 @@ export class AssetForge {
       trees: [], stumps: [], saplings: [], bushes: [],
       tufts: [], flowers: [], pebbles: [], rocks: [], patches: [],
       oreRocks: [], rubble: [], ironVeins: [], goldVeins: [],
-      char: null, wolf: null, npc: [],
+      char: null, wolf: null, npc: [], thief: [],
       buildings: {}, village: {}, fx: {},
       cars: [], trams: [], lights: [],
     };
@@ -254,6 +274,21 @@ export class AssetForge {
         this._job(() => {
           this._bakeNPCDir(A.npc[v], dd, NPC_LOOKS[v]);
           this._bakeNPCDir(A.npc[v], dd + 1, NPC_LOOKS[v]);
+        });
+      }
+    }
+
+    /* -------------------------------------------------- ladri (Fase 3+) */
+    // Stesso atlante degli abitanti (stesso rig, stesse direzioni/frame):
+    // `_bakeNPCDir` costruisce già con `buildCharacter`, e THIEF_LOOKS porta
+    // `hooded:true` dentro `look`, quindi non serve un metodo dedicato.
+    for (let v = 0; v < THIEF_LOOKS.length; v++) {
+      this._job(() => { A.thief[v] = this._newNPCAtlas(); });
+      for (let d = 0; d < NPC_DIRS; d += 2) {
+        const dd = d;
+        this._job(() => {
+          this._bakeNPCDir(A.thief[v], dd, THIEF_LOOKS[v]);
+          this._bakeNPCDir(A.thief[v], dd + 1, THIEF_LOOKS[v]);
         });
       }
     }
